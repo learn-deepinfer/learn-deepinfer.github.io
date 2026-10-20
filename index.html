@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Learn DeepInfer：从零理解与构建大模型推理引擎。跟着代码，逐步理解 token 生成、KV cache、批处理和调度。" />
+    <meta name="theme-color" content="#f5f4ef" />
+    <title>Learn DeepInfer · 从零理解推理引擎</title>
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #202d29; background: #f5f4ef; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100svh; }
+      .page { max-width: 1120px; min-height: 100svh; margin: auto; padding: 32px 40px 24px; display: flex; flex-direction: column; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+      .brand { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 650; letter-spacing: -.5px; }
+      .mark { width: 34px; height: 34px; color: #19654e; }
+      a { color: inherit; text-decoration: none; }
+      .github { color: #54605a; font-size: 14px; padding: 10px 0; }
+      a:hover { color: #19654e; }
+      a:focus-visible { outline: 3px solid #19654e; outline-offset: 5px; border-radius: 4px; }
+      main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 80px 0 100px; }
+      .eyebrow { color: #19654e; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 2px; margin: 0 0 28px; }
+      h1 { font-size: clamp(38px, 6.5vw, 76px); line-height: 1.2; letter-spacing: -3px; font-weight: 650; margin: 0; }
+      h1 span { color: #19654e; }
+      .intro { max-width: 580px; font-size: 17px; line-height: 1.95; color: #626b64; margin: 28px 0 34px; }
+      .action { align-self: flex-start; background: #202d29; color: #fff; padding: 15px 22px; border-radius: 7px; font-size: 14px; transition: background .15s; }
+      .action:hover { color: #fff; background: #19654e; }
+      .path { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: #64736a; margin-top: 55px; }
+      .path span { border: 1px solid #d8ded5; border-radius: 5px; padding: 6px 10px; }
+      .path i { font-style: normal; color: #9ba69b; }
+      footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid #dedfd7; padding-top: 20px; font-size: 12px; color: #737d73; line-height: 1.8; }
+      @media (max-width: 600px) {
+        .page { padding: 24px; }
+        .brand { font-size: 15px; }
+        main { padding: 72px 0; }
+        h1 { letter-spacing: -1.5px; }
+        .intro { font-size: 15px; }
+        .path { gap: 8px; margin-top: 40px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <a class="brand" href="/" aria-label="Learn DeepInfer 首页">
+          <svg class="mark" viewBox="0 0 34 34" fill="none" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" stroke="currentColor" stroke-width="1.5"/><path d="M10 10v14h14M15 19l4-5 5 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Learn DeepInfer
+        </a>
+        <a class="github" href="https://github.com/learn-deepinfer">GitHub ↗</a>
+      </header>
+      <main>
+        <p class="eyebrow" lang="en">LEARN INFERENCE BY BUILDING</p>
+        <h1>从第一颗 token，<br /><span>理解推理引擎。</span></h1>
+        <p class="intro">从一个能生成文本的小模型开始，跟着代码逐步理解 KV cache、批处理与调度，动手构建自己的推理引擎。<br />教程网站正在建设中。</p>
+        <a class="action" href="https://github.com/learn-deepinfer">在 GitHub 关注项目 &nbsp;↗</a>
+        <div class="path" aria-label="课程规划">
+          <span>Token loop</span><i aria-hidden="true">→</i><span>KV cache</span><i aria-hidden="true">→</i><span>Batching</span><i aria-hidden="true">→</i><span>Scheduling</span>
+        </div>
+      </main>
+      <footer><span>Learn DeepInfer · 社区学习项目</span><span>从源码到实践，一步一步。</span></footer>
+    </div>
+  </body>
+</html>
