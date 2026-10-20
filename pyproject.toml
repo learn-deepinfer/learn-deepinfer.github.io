@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "build-deepinfer"
+version = "0.1.0"
+description = "Build a readable inference engine, one working chapter at a time."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+dependencies = [
+  "torch>=2.5,<3",
+  "safetensors>=0.4,<1",
+  "tokenizers>=0.20,<1",
+  "huggingface-hub>=0.26,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "transformers>=4.46,<5"]
+media = ["Pillow>=10", "imageio-ffmpeg>=0.6"]
+
+[project.scripts]
+build-deepinfer = "build_deepinfer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["build_deepinfer*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

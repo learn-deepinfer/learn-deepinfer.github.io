@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+models/
+results/
+.DS_Store
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+web/public/source/
+web/public/media/
+web/public/chapter-01-source.zip

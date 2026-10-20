@@ -1,0 +1,119 @@
+{
+  "command": "python -m build_deepinfer --prompt 'Explain KV cache in one sentence.' --max-new-tokens 32 --threads 4 --local-files-only",
+  "command_redacted": true,
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "device": "cpu",
+  "prompt": "Explain KV cache in one sentence.",
+  "events": [
+    {
+      "time": 0.9760567920748144,
+      "text": "A"
+    },
+    {
+      "time": 1.027333208010532,
+      "text": " key"
+    },
+    {
+      "time": 1.0978365000337362,
+      "text": "-value"
+    },
+    {
+      "time": 1.179762333049439,
+      "text": " cache"
+    },
+    {
+      "time": 1.2414863751037046,
+      "text": " stores"
+    },
+    {
+      "time": 1.2951919580809772,
+      "text": " data"
+    },
+    {
+      "time": 1.3455389580922201,
+      "text": " in"
+    },
+    {
+      "time": 1.3960605000611395,
+      "text": " memory"
+    },
+    {
+      "time": 1.452603125013411,
+      "text": " or"
+    },
+    {
+      "time": 1.533857542090118,
+      "text": " disk"
+    },
+    {
+      "time": 1.5922499580774456,
+      "text": ","
+    },
+    {
+      "time": 1.6427767080022022,
+      "text": " providing"
+    },
+    {
+      "time": 1.6927230420988053,
+      "text": " fast"
+    },
+    {
+      "time": 1.790149333071895,
+      "text": " access"
+    },
+    {
+      "time": 1.8638480830704793,
+      "text": " to"
+    },
+    {
+      "time": 1.9207173330942169,
+      "text": " frequently"
+    },
+    {
+      "time": 1.9815970830386505,
+      "text": " accessed"
+    },
+    {
+      "time": 2.042416917043738,
+      "text": " data"
+    },
+    {
+      "time": 2.0975496250903234,
+      "text": "."
+    }
+  ],
+  "result": {
+    "text": "A key-value cache stores data in memory or disk, providing fast access to frequently accessed data.",
+    "token_ids": [
+      32,
+      1376,
+      19083,
+      6500,
+      10533,
+      821,
+      304,
+      4938,
+      476,
+      13364,
+      11,
+      8241,
+      4937,
+      2615,
+      311,
+      13814,
+      24758,
+      821,
+      13,
+      151645
+    ],
+    "prompt_tokens": 37,
+    "generated_tokens": 20,
+    "prefill_seconds": 0.9756817080779001,
+    "decode_seconds": 1.1730024999706075,
+    "total_seconds": 2.1486842080485076,
+    "tokens_per_second": 9.308022056049145,
+    "decode_tokens_per_second": 16.197748939559883,
+    "stopped_on_eos": true
+  },
+  "timing_note": "Generation excludes model loading and tokenization; generated tokens include EOS."
+}

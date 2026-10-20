@@ -1,0 +1,26 @@
+{
+  "project": "Learn DeepInfer",
+  "date": "2026-10-20",
+  "generator": "liangqianxing/aigc-image-generator",
+  "assets": [
+    {
+      "name": "Logo",
+      "aspect_ratio": "1:1",
+      "image_size": "2K",
+      "task_id": "6ad755e5-e4b081f2-7d16d7df-1792497125234",
+      "prompt_file": "logo-prompt.txt",
+      "output": "logo.png",
+      "processing": "Extracted the green silhouette, flattened to #19654e, removed the background, centered and resized."
+    },
+    {
+      "name": "Inference lab illustration",
+      "aspect_ratio": "4:3",
+      "image_size": "2K",
+      "task_id": "6ad755e5-e4b08c88-2e90dafc-1792497125202",
+      "prompt_file": "hero-prompt.txt",
+      "output": "inference-lab.webp",
+      "processing": "Center-cropped to exact 4:3, resized to 1440x1080, and compressed as WebP."
+    }
+  ],
+  "social_cover": "1200x630; composed locally from the generated logo and illustration with real text."
+}

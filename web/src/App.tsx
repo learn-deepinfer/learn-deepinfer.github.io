@@ -1,0 +1,171 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowDown, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Code2, Copy, Download, ExternalLink, GitCompareArrows, Github, Layers3, Menu, Moon, Search, Sparkles, Sun, Terminal, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import hljs from 'highlight.js/lib/core';
+import python from 'highlight.js/lib/languages/python';
+import bash from 'highlight.js/lib/languages/bash';
+import { diffLines } from 'diff';
+import { lessons, layers, type Lesson, type Locale, type LayerId } from './data/course';
+import { InferenceLab } from './components/InferenceLab';
+
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('bash', bash);
+const UPSTREAM = 'https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/';
+const REFERENCE = 'https://github.com/shareAI-lab/learn-claude-code';
+const colors: Record<LayerId, string> = { core: '#3b82f6', memory: '#10b981', scheduling: '#e9a123', distributed: '#8b5cf6' };
+const text = (locale: Locale, zh: string, en: string) => locale === 'zh' ? zh : en;
+
+function useStored<T,>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => {
+    try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? initial; } catch { return initial; }
+  });
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Persistence is optional. */ } }, [key, value]);
+  return [value, setValue] as const;
+}
+
+function CodeBlock({ code, filename = 'inference_loop.py', language = 'python', numbered = false }: { code: string; filename?: string; language?: string; numbered?: boolean }) {
+  const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle');
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const highlighted = useMemo(() => hljs.highlight(code, { language }).value, [code, language]);
+  async function copy() {
+    try { await navigator.clipboard.writeText(code); setCopyState('done'); } catch { setCopyState('error'); }
+    clearTimeout(timer.current); timer.current = setTimeout(() => setCopyState('idle'), 1800);
+  }
+  return <div className="code-window">
+    <div className="code-title"><div className="window-dots" aria-hidden="true"><i /><i /><i /></div><span>{filename}</span><button className="copy-button" onClick={copy} aria-label="Copy code">{copyState === 'done' ? <Check size={15} /> : <Copy size={15} />}<span>{copyState === 'done' ? 'Copied' : copyState === 'error' ? 'Select to copy' : 'Copy'}</span></button></div>
+    <div className="code-content">{numbered && <pre className="line-numbers" aria-hidden="true">{code.split('\n').map((_, i) => i + 1).join('\n')}</pre>}<pre><code dangerouslySetInnerHTML={{ __html: highlighted }} /></pre></div>
+  </div>;
+}
+
+const coreCode = `tokens = tokenizer.encode(prompt)
+cache = KVCache(num_layers)
+
+for step in range(max_new_tokens):
+    logits = model(tokens, cache=cache)
+    next_token = logits[:, -1].argmax(dim=-1)
+    if next_token.item() in eos_token_ids:
+        break
+    yield tokenizer.decode(next_token.tolist())
+    tokens = next_token[:, None]`;
+
+function Badge({ lesson }: { lesson: Lesson }) { return <span className="lesson-badge" style={{ '--layer': colors[lesson.layer] } as React.CSSProperties}>{lesson.id}</span>; }
+function Progress({ completed, locale }: { completed: string[]; locale: Locale }) {
+  return <div className="progress-display"><div><span>{text(locale, '学习进度', 'Your progress')}</span><b>{completed.length}<span> / {lessons.length}</span></b></div><div className="progress-track"><i style={{ width: `${completed.length / lessons.length * 100}%` }} /></div></div>;
+}
+
+function LessonCard({ lesson, locale, done }: { lesson: Lesson; locale: Locale; done: boolean }) {
+  return <Link className="lesson-card" to={`/${locale}/${lesson.id}`} style={{ '--layer': colors[lesson.layer] } as React.CSSProperties}>
+    <div className="card-meta"><Badge lesson={lesson} /><span>{done ? <CheckCircle2 size={15} aria-label={text(locale, '已完成', 'Completed')} /> : `${lesson.minutes} ${text(locale, '分钟', 'min')}`}</span></div>
+    <h3>{lesson.title}<ArrowRight size={16} /></h3><p>{lesson.summary[locale]}</p><div className="card-footer"><span>{lesson.name[locale]}</span><span className="card-arrow">↗</span></div>
+  </Link>;
+}
+
+function LearningPath({ locale, completed, full = false }: { locale: Locale; completed: string[]; full?: boolean }) {
+  const [selected, setSelected] = useState<LayerId | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const filtered = lessons.filter(l => (selected === 'all' || l.layer === selected) && `${l.title} ${l.name[locale]} ${l.summary[locale]} ${l.id}`.toLowerCase().includes(query.toLowerCase()));
+  return <section className={`path-section ${full ? 'standalone-section' : ''}`} id="learning-path">
+    <div className="section-top"><div><span className="eyebrow">{full ? 'THE LEARNING PATH' : '02 / THE LEARNING PATH'}</span><h2>{text(locale, '每次，只增加一个机制。', 'One mechanism at a time.')}</h2><p className="section-description">{text(locale, '12 节循序渐进的课程，从生成第一个 token 到读懂生产级推理系统。', '12 progressive lessons, from your first token to the design of a production inference engine.')}</p></div><Progress completed={completed} locale={locale} /></div>
+    <div className="path-toolbar"><div className="filter-tabs" aria-label={text(locale, '按架构层筛选', 'Filter by layer')}><button className={selected === 'all' ? 'selected' : ''} onClick={() => setSelected('all')}>{text(locale, '全部课程', 'All lessons')}<span>{lessons.length}</span></button>{layers.map(layer => <button key={layer.id} className={selected === layer.id ? 'selected' : ''} onClick={() => setSelected(layer.id)}><i style={{ background: colors[layer.id] }} />{layer.name[locale]}</button>)}</div><label className="course-search"><Search size={15} /><input aria-label={text(locale, '搜索课程', 'Search lessons')} placeholder={text(locale, '搜索课程…', 'Search lessons…')} value={query} onChange={e => setQuery(e.target.value)} /></label></div>
+    <div className="lesson-grid">{filtered.map(lesson => <LessonCard key={lesson.id} lesson={lesson} locale={locale} done={completed.includes(lesson.id)} />)}</div>
+    {filtered.length === 0 && <div className="empty-state"><Search size={24} /><h3>{text(locale, '没有找到相关课程', 'No matching lessons')}</h3><button className="text-link" onClick={() => { setQuery(''); setSelected('all'); }}>{text(locale, '清除筛选', 'Clear filters')}</button></div>}
+    {!full && <p className="path-note"><BookOpen size={14} />{text(locale, '所有章节均可直接阅读。阅读进度只保存在当前浏览器。', 'Every lesson is open. Reading progress stays in your browser.')}</p>}
+  </section>;
+}
+
+function Architecture({ locale, full = false }: { locale: Locale; full?: boolean }) {
+  return <section className={`architecture-section ${full ? 'standalone-section' : ''}`} id="architecture">
+    <div className="section-heading"><span className="eyebrow">{full ? 'THE BIG PICTURE' : '03 / THE BIG PICTURE'}</span><h2>{text(locale, '把机制，放回系统里。', 'Put each mechanism in context.')}</h2><p className="section-description">{text(locale, '四个相互协作的层次，组成一台推理引擎。', 'Four cooperating layers make an inference engine.')}</p></div>
+    <div className="architecture-stack">{layers.map((layer, index) => <div className="architecture-row" key={layer.id} style={{ '--layer': colors[layer.id] } as React.CSSProperties}><span className="layer-index">0{index + 1}</span><div className="layer-description"><h3><i />{layer.name[locale]}</h3><p>{layer.description[locale]}</p></div><div className="layer-lessons">{lessons.filter(l => l.layer === layer.id).map(l => <Link key={l.id} to={`/${locale}/${l.id}`}><span>{l.id}</span>{l.title}<ChevronRight size={13} /></Link>)}</div></div>)}</div>
+    {full && <div className="architecture-reading"><span className="eyebrow">FOLLOW THE SOURCE</span><h2>{text(locale, '沿着一条请求，读 DeepInfer。', 'Follow a request through DeepInfer.')}</h2><div className="source-pipeline">{['LLM.generate', 'LLMEngine.step', 'Scheduler', 'Worker', 'ModelRunner'].map((item, i) => <div key={item}><span>0{i + 1}</span><code>{item}</code>{i < 4 && <ArrowRight size={16} />}</div>)}</div><p className="section-description">{text(locale, '教学代码用于理解机制；下方链接指向固定版本的上游实现，方便逐一核对。', 'Teaching excerpts explain the mechanisms. These links point to a pinned upstream revision for inspection.')}</p><div className="source-file-list">{[
+      ['deepinfer/entrypoints/llm.py', 'LLM / request entry'], ['deepinfer/engine/llm_engine.py', 'Engine / coordination'], ['csrc/engine/scheduler.hpp', 'Scheduler / batch planning'], ['deepinfer/worker/worker.py', 'Worker / pipelined execution'], ['deepinfer/worker/model_runner.py', 'Model runner / device execution']
+    ].map(([path, label]) => <a key={path} href={`${UPSTREAM}${path}`} target="_blank" rel="noreferrer"><div><b>{label}</b><code>{path}</code></div><ExternalLink size={16} /></a>)}</div></div>}
+  </section>;
+}
+
+function Home({ locale, completed }: { locale: Locale; completed: string[] }) {
+  return <><section className="hero"><div className="hero-kicker"><span className="live-dot" />{text(locale, '从零构建 · 逐层理解', 'BUILD FROM SCRATCH · UNDERSTAND EVERY LAYER')}</div><h1>Learn DeepInfer<span className="title-dot">.</span></h1><p className="hero-subtitle">{text(locale, '从一个 token，读懂推理引擎。', 'Understand inference. One token at a time.')}</p><p className="hero-description">{text(locale, '每次只加一个机制，从最小生成循环出发，\n逐步走进 DeepInfer 的缓存、调度与并行世界。', 'Start with the smallest generation loop. Add one mechanism at a time,\nthen explore how DeepInfer manages memory, scheduling, and parallelism.')}</p><div className="hero-actions"><Link className="button primary" to={`/${locale}/s01`}>{text(locale, '开始学习', 'Start learning')}<ArrowRight size={16} /></Link><a className="button secondary" href="#learning-path">{text(locale, '浏览学习路径', 'Explore the path')}<ArrowDown size={15} /></a></div><div className="hero-footnotes"><span><Terminal size={14} />{text(locale, 'CPU 起步', 'CPU first')}</span><span><Layers3 size={14} />{text(locale, '12 个核心机制', '12 core mechanisms')}</span><a href="https://github.com/deepseek-ai/DeepInfer" target="_blank" rel="noreferrer"><Code2 size={14} />{text(locale, '对照真实源码', 'Grounded in source')}</a></div></section>
+    <section className="core-section"><div className="section-heading"><span className="eyebrow">01 / THE CORE LOOP</span><h2>{text(locale, '复杂的引擎，简单的起点。', 'A complex engine. A simple beginning.')}</h2><p className="section-description">{text(locale, '前向计算，选择下一个 token，再把它送回模型。\n缓存、批处理与调度，都围绕这个循环展开。', 'Run a forward pass, select the next token, and feed it back.\nCaching, batching, and scheduling all grow around this loop.')}</p></div><div className="core-code"><CodeBlock code={coreCode} /><p className="code-caption">{text(locale, '核心流程示意 · 省略流式解码的 Unicode 边界处理', 'Core-flow excerpt · Unicode stream handling omitted')}</p></div><div className="home-lab"><InferenceLab mode="loop" locale={locale} compact /></div></section>
+    <LearningPath locale={locale} completed={completed} /><Architecture locale={locale} />
+    <section className="closing-cta"><img className="closing-art" src="/brand/inference-lab.webp" width="230" height="172" loading="lazy" alt="" /><div><span className="eyebrow">YOUR FIRST TOKEN STARTS HERE</span><h2>{text(locale, '读懂它，从亲手运行开始。', 'Understand it by building it.')}</h2><p>{text(locale, '第一章：加载小模型，在普通电脑上生成真实文本。', 'Chapter 1: load a small model and generate real text on your computer.')}</p></div><Link className="button primary" to={`/${locale}/s01`}>{text(locale, '从第一章开始', 'Open Chapter 1')}<ArrowRight size={16} /></Link></section>
+  </>;
+}
+
+function Markdown({ children }: { children: string }) { return <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: props => <a {...props} target="_blank" rel="noreferrer" /> }}>{children}</ReactMarkdown>; }
+
+function LessonPage({ lesson, locale, completed, toggleComplete }: { lesson: Lesson; locale: Locale; completed: string[]; toggleComplete: (id: string) => void }) {
+  const [params, setParams] = useSearchParams();
+  const tab = ['read', 'code', 'lab', 'source'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'read';
+  const [menuOpen, setMenuOpen] = useState(false);
+  const index = lessons.indexOf(lesson);
+  const done = completed.includes(lesson.id);
+  useEffect(() => setMenuOpen(false), [lesson.id]);
+  const tabList = [ ['read', text(locale, '课程讲解', 'Lesson'), BookOpen], ['code', text(locale, '关键代码', 'Code'), Code2], ['lab', text(locale, '机制演示', 'Explore'), Sparkles], ['source', text(locale, '源码对照', 'Source'), Github] ] as const;
+  return <div className="lesson-layout"><aside className={`course-sidebar ${menuOpen ? 'expanded' : ''}`}><button className="sidebar-mobile-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen}><BookOpen size={16} />{text(locale, '课程目录', 'Lesson directory')}<Menu size={17} /></button><div className="sidebar-body"><Link className="sidebar-back" to={`/${locale}/timeline`}><ArrowLeft size={14} />{text(locale, '学习路径', 'Learning path')}</Link><Progress locale={locale} completed={completed} />{layers.map(layer => <div className="sidebar-group" key={layer.id}><h4><i style={{ background: colors[layer.id] }} />{layer.name[locale]}</h4>{lessons.filter(l => l.layer === layer.id).map(l => <Link key={l.id} className={l.id === lesson.id ? 'active' : ''} to={`/${locale}/${l.id}`}><span>{l.id}</span><b>{l.name[locale]}</b>{completed.includes(l.id) && <Check size={13} />}</Link>)}</div>)}</div></aside>
+    <article className="lesson-article"><div className="breadcrumb"><Link to={`/${locale}`}>Learn DeepInfer</Link><ChevronRight size={12} /><span>{lesson.id}</span></div><div className="lesson-heading"><div className="lesson-heading-meta"><Badge lesson={lesson} /><span>{layers.find(l => l.id === lesson.layer)?.name[locale]}</span><i />{lesson.minutes} {text(locale, '分钟阅读', 'min read')}</div><h1>{lesson.title}</h1><h2>{lesson.name[locale]}</h2><p>{lesson.summary[locale]}</p></div>
+    <div className="lesson-tabs" role="tablist" aria-label={text(locale, '课程内容', 'Lesson content')}>{tabList.map(([id, label, Icon], tabIndex) => <button key={id} id={`lesson-${lesson.id}-tab-${id}`} role="tab" tabIndex={tab === id ? 0 : -1} aria-selected={tab === id} aria-controls={`lesson-${lesson.id}-panel`} onClick={() => setParams(id === 'read' ? {} : { tab: id })} onKeyDown={e => {
+      const next = e.key === 'ArrowRight' ? (tabIndex + 1) % tabList.length : e.key === 'ArrowLeft' ? (tabIndex + tabList.length - 1) % tabList.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabList.length - 1 : -1;
+      if (next < 0) return;
+      e.preventDefault();
+      const nextId = tabList[next][0];
+      setParams(nextId === 'read' ? {} : { tab: nextId });
+      document.getElementById(`lesson-${lesson.id}-tab-${nextId}`)?.focus();
+    }}><Icon size={15} />{label}</button>)}</div>
+    <div className="lesson-tab-content" id={`lesson-${lesson.id}-panel`} role="tabpanel" aria-labelledby={`lesson-${lesson.id}-tab-${tab}`} tabIndex={0} key={`${lesson.id}-${tab}`}>
+      {tab === 'read' && <><div className="insight-callout"><Sparkles size={18} /><p>{lesson.insight[locale]}</p></div>{lesson.sections.map((section, i) => <section className="prose-section" id={`part-${i}`} key={i}><h2><span>0{i + 1}</span>{section.heading[locale]}</h2><div className="prose"><Markdown>{section.body[locale]}</Markdown></div>{i === 0 && <CodeBlock code={lesson.code} filename={lesson.filename} numbered />}</section>)}<div className="exercise-card"><span className="eyebrow">TRY IT YOURSELF</span><h3>{text(locale, '动手想一想', 'Make it yours')}</h3><div className="prose"><Markdown>{lesson.exercise[locale]}</Markdown></div><button className="text-link" onClick={() => { setParams({ tab: 'lab' }); window.scrollTo({ top: 160, behavior: 'smooth' }); }}>{text(locale, '打开机制演示', 'Open the interactive')}<ArrowRight size={15} /></button></div>{lesson.id === 's01' && <LocalExperiment locale={locale} />}</>}
+      {tab === 'code' && <><div className="tab-intro"><h2>{text(locale, '这次，我们只关注这个机制。', 'Focus on one mechanism.')}</h2><p>{text(locale, '以下是用于解释机制的教学片段；完整上游实现见“源码对照”。', 'This teaching excerpt isolates the mechanism. Inspect the complete upstream implementation in Source.')}</p></div><CodeBlock code={lesson.code} filename={lesson.filename} numbered />{lesson.id === 's01' && <LocalExperiment locale={locale} />}</>}
+      {tab === 'lab' && <><div className="tab-intro"><h2>{text(locale, '让机制，一步步发生。', 'Watch the mechanism unfold.')}</h2><p>{text(locale, '用单步、播放与重置观察状态变化，回到代码核对每一步。', 'Step, play, and reset to inspect state changes. Then connect each step to the code.')}</p></div><InferenceLab mode={lesson.demo} locale={locale} /><div className="lab-reading-note"><BookOpen size={17} /><p>{lesson.insight[locale]}</p></div></>}
+      {tab === 'source' && <><div className="tab-intro"><h2>{text(locale, '从教学机制，走向真实实现。', 'From the lesson to the real implementation.')}</h2><p>{text(locale, '上游源码固定在 8b16149，避免主分支变化让链接失去上下文。', 'Source links are pinned to 8b16149 so the implementation remains reproducible.')}</p></div><a className="upstream-source" href={`${UPSTREAM}${lesson.sourcePath}`} target="_blank" rel="noreferrer"><Github size={23} /><div><b>deepseek-ai / DeepInfer</b><code>{lesson.sourcePath}</code></div><ExternalLink size={17} /></a><div className="prose"><p>{text(locale, '本网站使用小而清晰的片段解释机制。DeepInfer 的生产实现还包含分布式通信、设备算子和状态管理；阅读时先确认模块的输入、输出和状态，再追踪具体优化。', 'The site explains mechanisms with small excerpts. Production DeepInfer also includes distributed communication, device kernels, and state management. First establish the module’s inputs, outputs, and state, then trace its optimizations.')}</p></div>{lesson.id === 's01' && <><h3 className="source-heading">{text(locale, '本项目的第一章实现', 'Our Chapter 1 implementation')}</h3><div className="source-file-list">{['model.py', 'engine.py', 'cli.py'].map(file => <a key={file} href={`/source/${file}`} target="_blank" rel="noreferrer"><div><b>{file}</b><code>build_deepinfer/{file}</code></div><ExternalLink size={16} /></a>)}</div></>}<Link className="text-link" to={`/${locale}/layers`}>{text(locale, '查看完整架构映射', 'See the architecture map')}<ArrowRight size={15} /></Link></>}
+    </div>
+    <div className="lesson-completion"><div><CheckCircle2 size={21} /><span>{done ? text(locale, '这一章，已经读懂了。', 'One more mechanism understood.') : text(locale, '把这个机制，加入你的工具箱。', 'Add this mechanism to your toolkit.')}</span></div><button className={`button ${done ? 'secondary' : 'primary'}`} aria-pressed={done} onClick={() => toggleComplete(lesson.id)}>{done ? <Check size={16} /> : null}{done ? text(locale, '已完成 · 点击撤销', 'Completed · undo') : text(locale, '标记为已完成', 'Mark as complete')}</button></div>
+    <div className="lesson-pagination">{index > 0 ? <Link to={`/${locale}/${lessons[index - 1].id}`}><ArrowLeft size={16} /><div><span>{text(locale, '上一章', 'Previous')}</span><b>{lessons[index - 1].title}</b></div></Link> : <span />}{index < lessons.length - 1 ? <Link to={`/${locale}/${lessons[index + 1].id}`} className="next"><div><span>{text(locale, '下一章', 'Next')}</span><b>{lessons[index + 1].title}</b></div><ArrowRight size={16} /></Link> : <Link className="next" to={`/${locale}/timeline`}>{text(locale, '回顾学习路径', 'Review the path')}<ArrowRight size={16} /></Link>}</div></article>
+    <aside className="page-toc"><span>{text(locale, '本章内容', 'ON THIS PAGE')}</span>{lesson.sections.map((s, i) => <a key={i} href={`#part-${i}`} onClick={() => { if (tab !== 'read') setParams({}); }}>{s.heading[locale]}</a>)}<div className="toc-source"><Code2 size={16} /><p>{text(locale, '理解机制，也读懂源码。', 'Learn the mechanism. Read the source.')}</p><a href={`${UPSTREAM}${lesson.sourcePath}`} target="_blank" rel="noreferrer">DeepInfer<ExternalLink size={12} /></a></div></aside>
+  </div>;
+}
+
+function LocalExperiment({ locale }: { locale: Locale }) {
+  return <section className="local-experiment"><div className="experiment-label"><Terminal size={16} /><span>{text(locale, '在自己的电脑上运行', 'RUN ON YOUR COMPUTER')}</span><span className="cpu-badge">CPU</span></div><h3>{text(locale, '生成真实文本。', 'Generate real text.')}</h3><p>{text(locale, '下载第一章源码，解压并进入文件夹，使用 Python 3.10+ 安装依赖。首次运行会下载约 1 GB 的小模型权重；CPU 以 FP32 加载时模型参数约占 2 GB 内存，另需运行开销。', 'Download Chapter 1, unzip, and open a terminal inside the folder. Install with Python 3.10+. The first run downloads about 1 GB of weights; CPU FP32 parameters use about 2 GB of memory, plus runtime overhead.')}</p><CodeBlock filename="terminal" language="bash" code={'python -m venv .venv\nsource .venv/bin/activate\npython -m pip install -e .\npython -m build_deepinfer --prompt "Explain KV cache in a transformer in one sentence." --max-new-tokens 48'} /><div className="experiment-bottom"><a className="button secondary" href="/chapter-01-source.zip" download><Download size={15} />{text(locale, '下载第一章源码', 'Download Chapter 1')}</a><span>{text(locale, 'Qwen2.5-0.5B · 手写前向与生成循环', 'Qwen2.5-0.5B · explicit forward + generation loop')}</span></div><div className="real-demo"><video controls playsInline preload="metadata" poster="/media/chapter-01-preview.png" aria-label={text(locale, '第一章真实 CPU 运行录屏', 'Actual Chapter 1 CPU recording')}><source src="/media/chapter-01.mp4" type="video/mp4" /></video><p>{text(locale, '真实 CPU 运行录屏 · 本机一次运行，非跨框架性能对比', 'Actual CPU recording · one local run, not a cross-framework benchmark')}<a href="/media/chapter-01-recording.json" target="_blank" rel="noreferrer">{text(locale, '查看原始记录', 'View recording data')}<ExternalLink size={11} /></a></p></div></section>;
+}
+
+function ComparePage({ locale }: { locale: Locale }) {
+  const [a, setA] = useState('s01'); const [b, setB] = useState('s03');
+  const left = lessons.find(l => l.id === a)!; const right = lessons.find(l => l.id === b)!;
+  const diff = useMemo(() => diffLines(left.code, right.code), [left.code, right.code]);
+  return <section className="compare-page standalone-section"><div className="section-heading"><span className="eyebrow">WHAT CHANGES?</span><h1>{text(locale, '每一步，为什么而改变？', 'What changes, and why?')}</h1><p className="section-description">{text(locale, '并排比较章节的核心想法，再看关键代码如何变化。', 'Compare the ideas behind two lessons, then inspect how their teaching excerpts differ.')}</p></div><div className="compare-selectors">{[[a, setA, text(locale, '起点', 'FROM')], [b, setB, text(locale, '下一步', 'TO')]].map(([value, setter, label], i) => <div key={i}><label htmlFor={`compare-${i}`}>{label as string}</label><select id={`compare-${i}`} value={value as string} onChange={e => (setter as (v: string) => void)(e.target.value)}>{lessons.map(l => <option key={l.id} value={l.id}>{l.id} · {l.title}</option>)}</select></div>)}<GitCompareArrows className="compare-center" size={22} /></div><div className="comparison-insights">{[left, right].map((l, i) => <div key={i}><Badge lesson={l} /><h2>{l.name[locale]}</h2><p>{l.insight[locale]}</p><Link className="text-link" to={`/${locale}/${l.id}`}>{text(locale, '阅读这一章', 'Read lesson')}<ArrowRight size={14} /></Link></div>)}</div><div className="diff-heading"><h2>{text(locale, '关键代码对比', 'Teaching excerpt diff')}</h2><span><i className="removed" />{text(locale, '移除', 'Removed')}<i className="added" />{text(locale, '增加', 'Added')}</span></div><div className="code-diff"><div className="diff-filenames"><code>{left.filename}</code><ArrowRight size={14} /><code>{right.filename}</code></div><pre>{diff.map((part, i) => <span key={i} className={part.added ? 'diff-added' : part.removed ? 'diff-removed' : ''}>{part.value.replace(/\n$/, '').split('\n').map((line, j) => <span className="diff-line" key={j}><i>{part.added ? '+' : part.removed ? '−' : ' '}</i>{line || ' '}{'\n'}</span>)}</span>)}</pre></div><p className="path-note">{text(locale, '对比对象为课程教学片段，不表示两个可部署引擎版本的性能差异。', 'These are teaching excerpts, not performance comparisons between deployable engines.')}</p></section>;
+}
+
+function SearchDialog({ locale, onClose }: { locale: Locale; onClose: () => void }) {
+  const [query, setQuery] = useState(''); const box = useRef<HTMLDivElement>(null);
+  const results = lessons.filter(l => `${l.id} ${l.title} ${l.name.zh} ${l.name.en} ${l.summary.zh} ${l.summary.en}`.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => { const old = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = old; }; }, []);
+  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className="search-dialog" ref={box} role="dialog" aria-modal="true" aria-label={text(locale, '搜索课程', 'Search lessons')} onKeyDown={e => { if (e.key === 'Escape') onClose(); if (e.key === 'Tab') { const items = box.current?.querySelectorAll<HTMLElement>('button,input,a'); if (items?.length) { const first = items[0], last = items[items.length - 1]; if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } } } }}><div className="search-input-row"><Search size={20} /><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder={text(locale, '搜索机制、章节或关键词…', 'Search mechanisms, lessons, or keywords…')} aria-label={text(locale, '搜索关键词', 'Search query')} /><button onClick={onClose} aria-label={text(locale, '关闭搜索', 'Close search')}><X size={19} /></button></div><div className="search-results"><span>{query ? text(locale, `${results.length} 条结果`, `${results.length} results`) : text(locale, '全部课程', 'ALL LESSONS')}</span>{results.map(l => <Link to={`/${locale}/${l.id}`} onClick={onClose} key={l.id}><Badge lesson={l} /><div><b>{l.title}</b><p>{l.name[locale]}</p></div><ArrowRight size={15} /></Link>)}{results.length === 0 && <p className="search-empty">{text(locale, '试试 KV cache、调度或 MoE。', 'Try KV cache, scheduling, or MoE.')}</p>}</div><div className="search-footer"><kbd>esc</kbd>{text(locale, '关闭', 'to close')}<span>Learn DeepInfer</span></div></div></div>;
+}
+
+function Site() {
+  const { locale: localeParam = 'zh', page = '' } = useParams();
+  const locale: Locale = localeParam === 'en' ? 'en' : 'zh';
+  const location = useLocation();
+  const [theme, setTheme] = useStored<'light' | 'dark'>('learn-deepinfer:theme', 'light');
+  const [storedCompleted, setCompleted] = useStored<string[]>('learn-deepinfer:completed', []);
+  const completed = Array.isArray(storedCompleted) ? storedCompleted.filter(id => lessons.some(l => l.id === id)) : [];
+  const [searchOpen, setSearchOpen] = useState(false); const [mobileMenu, setMobileMenu] = useState(false);
+  const searchReturnFocus = useRef<HTMLElement | null>(null);
+  function openSearch() { searchReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSearchOpen(true); }
+  function closeSearch() { setSearchOpen(false); requestAnimationFrame(() => { if (searchReturnFocus.current?.isConnected) searchReturnFocus.current.focus(); }); }
+  const lesson = lessons.find(l => l.id === page);
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  useEffect(() => { document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'; document.title = `${lesson ? lesson.title + ' — ' : ''}Learn DeepInfer`; window.scrollTo({ top: 0 }); setMobileMenu(false); setSearchOpen(false); }, [location.pathname, locale, lesson]);
+  useEffect(() => { function key(e: KeyboardEvent) { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (searchOpen) closeSearch(); else openSearch(); } if (e.key === 'Escape' && searchOpen) closeSearch(); } window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key); }, [searchOpen]);
+  function toggleComplete(id: string) { setCompleted(completed.includes(id) ? completed.filter(x => x !== id) : [...completed, id]); }
+  if (!['zh', 'en'].includes(localeParam)) return <Navigate to="/zh/" replace />;
+  const navItems = [['timeline', text(locale, '学习路径', 'Learning path')], ['compare', text(locale, '章节对比', 'Compare')], ['layers', text(locale, '架构层', 'Architecture')]];
+  return <><a className="skip-link" href="#main">{text(locale, '跳转到正文', 'Skip to content')}</a><header className="site-header"><div className="header-inner"><Link className="brand" to={`/${locale}/`} aria-label="Learn DeepInfer home"><img className="brand-mark" src="/brand/logo-192.png" alt="" width="30" height="30" /><span>Learn DeepInfer</span></Link><nav className={`main-nav ${mobileMenu ? 'is-open' : ''}`} aria-label={text(locale, '主导航', 'Main navigation')}>{navItems.map(([route, label]) => <Link key={route} className={page === route ? 'active' : ''} to={`/${locale}/${route}`}>{label}</Link>)}</nav><div className="header-controls"><button className="search-trigger" onClick={openSearch} aria-label={text(locale, '搜索课程', 'Search lessons')}><Search size={16} /><kbd>⌘ K</kbd></button><div className="language-switch" aria-label="Language"><Link className={locale === 'en' ? 'active' : ''} to={`/en/${page}${location.search}`}>EN</Link><Link className={locale === 'zh' ? 'active' : ''} to={`/zh/${page}${location.search}`}>中文</Link></div><span className="header-divider" /><button className="icon-button theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={text(locale, theme === 'dark' ? '切换浅色主题' : '切换深色主题', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme')}>{theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}</button><a className="icon-button github-link" href="https://github.com/learn-deepinfer/learn-deepinfer.github.io" target="_blank" rel="noreferrer" aria-label={text(locale, '网站 GitHub 仓库', 'Website GitHub repository')}><Github size={20} /></a><button className="icon-button mobile-menu-button" onClick={() => setMobileMenu(!mobileMenu)} aria-expanded={mobileMenu} aria-label={text(locale, '打开导航', 'Toggle navigation')}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button></div></div></header>
+    <main id="main" className={lesson ? 'site-main lesson-main' : 'site-main'}>{page === '' ? <Home locale={locale} completed={completed} /> : page === 'timeline' ? <LearningPath locale={locale} completed={completed} full /> : page === 'compare' ? <ComparePage locale={locale} /> : page === 'layers' ? <Architecture locale={locale} full /> : lesson ? <LessonPage key={lesson.id} lesson={lesson} locale={locale} completed={completed} toggleComplete={toggleComplete} /> : <div className="empty-state not-found"><span className="eyebrow">404</span><h1>{text(locale, '这一页，还不在学习路径上。', 'This page is off the learning path.')}</h1><Link className="button primary" to={`/${locale}/`}>{text(locale, '返回首页', 'Back home')}<ArrowRight size={16} /></Link></div>}</main>
+    <footer className="site-footer"><div><Link className="footer-brand" to={`/${locale}/`}><img className="brand-mark" src="/brand/logo-192.png" alt="" width="24" height="24" />Learn DeepInfer</Link><p>{text(locale, '独立社区学习项目 · 逐步理解现代推理系统', 'An independent learning project about modern inference systems')}</p></div><div className="footer-links"><a href="https://github.com/deepseek-ai/DeepInfer" target="_blank" rel="noreferrer">DeepInfer<ExternalLink size={12} /></a><a href={REFERENCE} target="_blank" rel="noreferrer">{text(locale, '灵感来自 Learn Claude Code', 'Inspired by Learn Claude Code')}<ExternalLink size={12} /></a><span>Made for the curious.</span></div></footer>{searchOpen && <SearchDialog locale={locale} onClose={closeSearch} />}
+  </>;
+}
+
+export default function App() { return <Routes><Route path="/" element={<Navigate to="/zh/" replace />} /><Route path="/:locale/:page?" element={<Site />} /><Route path="*" element={<Navigate to="/zh/404" replace />} /></Routes>; }
