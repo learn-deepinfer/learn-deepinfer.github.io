@@ -7,10 +7,11 @@
       "name": "Logo",
       "aspect_ratio": "1:1",
       "image_size": "2K",
-      "task_id": "6ad755e5-e4b081f2-7d16d7df-1792497125234",
+      "task_id": "6ad766a4-e4b0686c-603cac19-1792501412618",
       "prompt_file": "logo-prompt.txt",
       "output": "logo.png",
-      "processing": "Extracted the green silhouette, flattened to #19654e, removed the background, centered and resized."
+      "processing": "Isolated the dark green silhouette, flattened to #19654e, removed background tint, centered, and exported web icons plus a circular-crop-safe avatar.",
+      "original_source": "docs/brand-generation/2026-10-20/logo-original.png"
     },
     {
       "name": "Inference lab illustration",
@@ -22,5 +23,5 @@
       "processing": "Center-cropped to exact 4:3, resized to 1440x1080, and compressed as WebP."
     }
   ],
-  "social_cover": "1200x630; composed locally from the generated logo and illustration with real text."
+  "social_cover": "1200x630; rendered from docs/diagrams/social.html with real HTML text and the generated logo; architecture, mechanisms, and source-reading focus."
 }

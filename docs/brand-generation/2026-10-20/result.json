@@ -1,0 +1,45 @@
+{
+  "status": 1,
+  "data": {
+    "candidates": [
+      {
+        "content": {
+          "role": "model",
+          "parts": [
+            {
+              "inlineData": {
+                "mimeType": "image/png",
+                "data": "https://s3plus.vip.sankuai.com/aigc-public-resources/gemini-image-generate/6ad766a4-e4b0686c-603cac19-1792501412618.png"
+              }
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 445,
+      "candidatesTokenCount": 1120,
+      "totalTokenCount": 1769,
+      "trafficType": "ON_DEMAND",
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 445
+        }
+      ],
+      "candidatesTokensDetails": [
+        {
+          "modality": "IMAGE",
+          "tokenCount": 1120
+        }
+      ],
+      "thoughtsTokenCount": 204
+    },
+    "modelVersion": "gemini-3-pro-image",
+    "createTime": "2026-10-20T13:03:33.573575Z",
+    "responseId": "pWbXaoeBI9aT4_UPw-fOgQk"
+  },
+  "createTime": "2026-10-20 21:03:32",
+  "successTime": "2026-10-20 21:04:15"
+}

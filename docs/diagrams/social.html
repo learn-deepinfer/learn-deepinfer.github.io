@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Learn DeepInfer — 框架讲解与理解</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    .figure { position: relative; width: 1200px; height: 630px; overflow: hidden; background: #102d27; color: #f0f3e5; }
+    .grid { position: absolute; inset: 0; background-image: linear-gradient(#a9c3a309 1px, transparent 1px), linear-gradient(90deg, #a9c3a309 1px, transparent 1px); background-size: 36px 36px; mask-image: linear-gradient(90deg, transparent, #000); }
+    .glow { position: absolute; top: -230px; right: -200px; width: 920px; height: 920px; background: radial-gradient(circle, #b2d28b15, transparent 65%); }
+    .orbit { position: absolute; top: -40px; right: -95px; width: 650px; height: 650px; border: 1px solid #9dba8c12; border-radius: 50%; box-shadow: 0 0 0 56px #b2d28b07, 0 0 0 112px #b2d28b05; }
+    .brand { position: absolute; left: 56px; top: 47px; display: flex; align-items: center; gap: 13px; font-size: 20px; font-weight: 580; letter-spacing: -.5px; }
+    .brand-icon { display: grid; place-items: center; width: 46px; height: 46px; background: #f5f4ef; border-radius: 12px; }
+    .brand img { display: block; width: 39px; height: 39px; object-fit: contain; }
+    .edition { position: absolute; right: 56px; top: 65px; color: #9db69a; font: 10px ui-monospace, monospace; letter-spacing: 1.8px; }
+    .copy { position: absolute; left: 56px; top: 191px; width: 570px; }
+    .kicker { color: #aac895; font: 10px ui-monospace, monospace; letter-spacing: 2.5px; margin-bottom: 24px; }
+    h1 { margin: 0; font-size: 56px; line-height: 1.23; font-weight: 570; letter-spacing: -1.8px; }
+    h1 span { display: block; color: #c2dda4; }
+    .subtitle { margin: 23px 0 0; font-size: 18px; line-height: 1.6; color: #afc0b3; letter-spacing: 1px; }
+    .chips { display: flex; gap: 9px; margin-top: 29px; }
+    .chips span { border: 1px solid #91ad8033; border-radius: 5px; padding: 7px 10px; color: #afc2aa; font: 9px ui-monospace, monospace; letter-spacing: .5px; }
+    .art { position: absolute; right: 56px; top: 191px; width: 440px; height: 300px; }
+    .art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .block { position: absolute; border: 1px solid #6f8e675c; background: #1b3a30; border-radius: 10px; padding: 16px; }
+    .label { color: #9eb893; font: 8px ui-monospace, monospace; letter-spacing: 1.3px; }
+    .block b { display: block; margin-top: 9px; font-weight: 550; }
+    .request, .state { top: 0; width: 176px; height: 70px; }
+    .request { left: 0; }
+    .state { right: 0; }
+    .request b, .state b { font: 12px ui-monospace, monospace; }
+    .engine { left: 57px; top: 94px; width: 326px; height: 114px; padding: 19px 22px; color: #18382b; background: #cee0b7; border-color: #d3e3c0; box-shadow: 0 18px 50px #00181126; }
+    .engine .label { color: #58744b; }
+    .engine b { font-size: 25px; letter-spacing: -.5px; }
+    .engine p { margin: 10px 0 0; font: 10px ui-monospace, monospace; color: #59754e; }
+    .worker, .experts { top: 233px; width: 207px; height: 70px; }
+    .worker { left: 0; }
+    .experts { right: 0; }
+    .worker b { font-size: 14px; letter-spacing: -.2px; }
+    .experts b { font-size: 13px; letter-spacing: -.2px; }
+    .bottom { position: absolute; left: 56px; right: 56px; bottom: 37px; padding-top: 18px; border-top: 1px solid #87a27b2e; display: flex; justify-content: space-between; color: #91a88b; font: 10px ui-monospace, monospace; letter-spacing: .6px; }
+  </style>
+</head>
+<body>
+  <main class="figure">
+    <div class="grid"></div><div class="glow"></div><div class="orbit"></div>
+    <div class="brand"><span class="brand-icon"><img src="../../web/public/brand/logo-192.png" alt=""></span>Learn DeepInfer</div>
+    <div class="edition">AN INDEPENDENT FRAMEWORK FIELD GUIDE</div>
+    <div class="copy">
+      <div class="kicker">MAP · TRACE · UNDERSTAND</div>
+      <h1>沿着源码，<span>看懂 DeepInfer。</span></h1>
+      <p class="subtitle">架构图解 · 机制动画 · 源码导读</p>
+      <div class="chips"><span>12 LESSONS</span><span>INTERACTIVE</span><span>中文 / ENGLISH</span></div>
+    </div>
+    <div class="art" aria-label="DeepInfer 请求入口、状态、引擎调度与执行之间的关系">
+      <svg viewBox="0 0 440 303" fill="none" aria-hidden="true">
+        <path d="M88 70 V82 H140 V94 M352 70 V82 H300 V94 M140 208 V220 H103 V233 M300 208 V220 H336 V233" stroke="#94b282" stroke-width="1.5"/>
+        <circle cx="140" cy="82" r="3" fill="#c7dfa9"/><circle cx="300" cy="220" r="3" fill="#c7dfa9"/>
+      </svg>
+      <div class="block request"><div class="label">ENTRYPOINT</div><b>LLM.generate()</b></div>
+      <div class="block state"><div class="label">SHARED STATE</div><b>KV blocks / prefix</b></div>
+      <div class="block engine"><div class="label">ORCHESTRATION</div><b>LLMEngine.step()</b><p>schedule → execute → update</p></div>
+      <div class="block worker"><div class="label">EXECUTION</div><b>Worker / ModelRunner</b></div>
+      <div class="block experts"><div class="label">DISTRIBUTION</div><b>Route / combine / EPLB</b></div>
+    </div>
+    <div class="bottom"><span>READ THE CODE. SEE THE SYSTEM.</span><span>learn-deepinfer.github.io</span></div>
+  </main>
+  <script>window.__figureReady = true;</script>
+</body>
+</html>

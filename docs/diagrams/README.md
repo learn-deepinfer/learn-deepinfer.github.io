@@ -14,6 +14,7 @@ To use an existing browser, set `PLAYWRIGHT_EXECUTABLE` to its executable path. 
 | Source | Export | Purpose |
 | :--- | :--- | :--- |
 | `hero.html` | `readme-cover.png`, `readme-cover-zh.png` | English and Chinese README covers |
+| `social.html` | `social-cover.png` | 1200 × 630 Chinese social sharing cover |
 | `gallery.html?kind=architecture` | `architecture.png` | Four responsibilities and their lessons |
 | `pipeline.html` | `production-pipeline.png` | DeepInfer request lifecycle |
 | `gallery.html?kind=cache` | `cache-timeline.png` | Logical positions and physical blocks |
@@ -21,4 +22,4 @@ To use an existing browser, set `PLAYWRIGHT_EXECUTABLE` to its executable path. 
 | `experts.html` | `expert-routing.png` | Dispatch and weighted combination |
 | `gallery.html?kind=formulas` | `core-equations.png` | Four conceptual framework equations |
 
-All figures use a shared warm paper / forest green palette and export at twice their CSS dimensions. The diagram renderer checks artboard size and browser script errors. The equations describe concepts; implementation-specific behavior is explained in the architecture guides and pinned source links.
+All figures use a shared warm paper / forest green palette and export at twice their CSS dimensions. The social cover exports at 2400 × 1260; resize it to 1200 × 630 when producing `web/public/brand/social-cover.jpg`. Its logo is loaded from `web/public/brand/logo-192.png`, and all labels remain editable HTML text. The diagram renderer checks artboard size and browser script errors. The equations describe concepts; implementation-specific behavior is explained in the architecture guides and pinned source links.
