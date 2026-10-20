@@ -20,6 +20,13 @@
 
 > 项目定位：DeepInfer 框架讲解与理解。课程围绕架构、机制、概念公式和源码阅读展开；交互演示使用预设状态展示机制。
 
+> **从官方设计读起** · [八个问题理解阶段分工、状态复用与调度 →](docs/official-design.zh-CN.md)
+> 对照 DeepSeek 官方文章阅读，分清设计动机、公开源码与内部组件的边界。
+
+[![官方设计阅读图：阶段分离、缓存与回放、分层负载均衡、跨轮异步与结构化输出](docs/assets/diagrams/official-design-zh.png)](https://learn-deepinfer.github.io/zh/layers/)
+
+点图进入[网站架构地图](https://learn-deepinfer.github.io/zh/layers/)，把官方设计问题放回课程主线。
+
 ## 从全局地图开始
 
 先辨认四类职责，再沿着具体请求把它们连接起来。下图是课程的组织方式；模块的实际调用关系见后面的请求链路。
@@ -140,6 +147,8 @@ docs/assets/diagrams/  README 与文档使用的高清图解
 ## 致谢与许可
 
 独立的社区学习项目，围绕 [deepseek-ai/DeepInfer](https://github.com/deepseek-ai/DeepInfer)。课程组织与文档设计参考 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)。
+
+设计解读参考 DeepSeek 官方[《DeepSeek V4.1 Flash 大规模推理部署实践》](https://zhuanlan.zhihu.com/p/2095560295930508953)，由本项目整理为独立的学习导读。
 
 [Apache-2.0](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 

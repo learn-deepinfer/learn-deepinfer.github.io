@@ -20,6 +20,13 @@ How does a request enter the engine? Who chooses the next round of work? How is 
 
 > A visual field guide to the DeepInfer framework: architecture, mechanisms, conceptual equations, and source reading. Interactive examples use preset states to explain each mechanism.
 
+> **Start with the official design** · [Eight questions about stages, state reuse, and scheduling →](docs/official-design.md)
+> Read alongside DeepSeek's official article, with clear boundaries between design motivations, public source, and internal components.
+
+[![Official design reading map: stage separation, cache and replay, load balancing at different levels, overlap across rounds, and structured output](docs/assets/diagrams/official-design.png)](https://learn-deepinfer.github.io/en/layers/)
+
+Open the [website's architecture map](https://learn-deepinfer.github.io/en/layers/) from the image to connect these questions to the course.
+
 ## Start with the system map
 
 Identify four responsibilities, then connect them by following a request. This is the course map; the actual request chain appears below.
@@ -140,6 +147,8 @@ Contributions are welcome: clearer diagrams, source-map corrections, translation
 ## Credits & license
 
 An independent community learning project about [deepseek-ai/DeepInfer](https://github.com/deepseek-ai/DeepInfer). The progressive course structure and documentation design draw inspiration from [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code).
+
+The independent design notes draw on DeepSeek's official article [《DeepSeek V4.1 Flash 大规模推理部署实践》](https://zhuanlan.zhihu.com/p/2095560295930508953).
 
 [Apache-2.0](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 

@@ -24,13 +24,13 @@ const summaries = {
     '': ['Learn DeepInfer — 沿着源码，看懂系统', '通过架构图、机制动画与固定版本源码导读，逐层理解 DeepInfer 的请求、状态、调度与专家协作。'],
     timeline: ['学习路径 — Learn DeepInfer', '12 节 DeepInfer 框架课程，沿着请求生命周期理解状态管理、调度与专家协作。'],
     compare: ['章节对比 — Learn DeepInfer', '比较两个章节的核心机制与教学代码，理解每一次状态、接口和执行流程的变化。'],
-    layers: ['推理引擎架构 — Learn DeepInfer', '沿着推理核心、状态与内存、批处理与调度、分布式与专家四个层次，建立 DeepInfer 源码地图。'],
+    layers: ['推理引擎架构 — Learn DeepInfer', '通过源码地图与官方设计导读，理解 DeepInfer 的阶段分离、缓存回放、负载均衡、跨轮异步与结构化输出。'],
   },
   en: {
     '': ['Learn DeepInfer — Read the code. See the system.', 'Understand the DeepInfer framework through architecture diagrams, animated mechanisms, and guided source reading.'],
     timeline: ['Learning path — Learn DeepInfer', 'Explore 12 DeepInfer framework lessons, from request lifecycle to state management, scheduling, and expert coordination.'],
     compare: ['Compare lessons — Learn DeepInfer', 'Compare the ideas and teaching code behind two lessons to understand how state, interfaces, and execution evolve.'],
-    layers: ['Inference architecture — Learn DeepInfer', 'Map DeepInfer source across four cooperating layers: inference core, state and memory, scheduling, and distributed experts.'],
+    layers: ['Inference architecture — Learn DeepInfer', 'Explore DeepInfer through a source map and official design guide: stage separation, cache replay, load balancing, asynchronous rounds, and structured output.'],
   },
 };
 

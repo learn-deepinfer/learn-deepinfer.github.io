@@ -4,7 +4,7 @@
 
 这份地图按要回答的问题组织源码入口。所有上游链接固定在 [`deepseek-ai/DeepInfer@8b16149741a4935e1dec8cea27853f273b374c5b`](https://github.com/deepseek-ai/DeepInfer/tree/8b16149741a4935e1dec8cea27853f273b374c5b)，方便把文档中的状态变化与同一版本的实现逐项对照。
 
-第一遍只沿主链阅读：`LLM.generate → LLMEngine.add_request → Scheduler → Worker.execute_model_step → 后处理 → RequestOutput`。先找清输入、持有的状态、返回值和释放时机，再追踪各个分支。
+第一遍只沿主链阅读：`LLM.generate → LLMEngine.add_request` 建立请求；随后 `LLM._run_engine → LLMEngine.step → Scheduler → Worker.execute_model_step → 后处理 → RequestOutput` 推进各轮并收集结果。先分清外层循环、一轮编排与调度选择，再找清各模块的输入、持有状态、返回值和释放时机。
 
 ## 1. 请求如何进入，又如何返回
 
@@ -71,3 +71,9 @@
 读 DFlash 元数据时，留意浅复制后的对象仍共享未覆盖的张量，不能据此把副本中的每个字段都当成独立可写状态。读专家负载均衡时，则把物理放置调整与 token 的逻辑专家选择分开。
 
 完成一遍阅读后，试着只用五个动词复述一条请求：**入队、准入、提交、收集、释放**。每个动词都应能找到状态变化和对应源码；暂时找不到的地方，就是下一遍需要补齐的依赖。
+
+## 官方文章与开源边界
+
+DeepSeek 官方[《DeepSeek V4.1 Flash 大规模推理部署实践》](https://zhuanlan.zhihu.com/p/2095560295930508953)提供阶段分离、缓存状态、请求负载、DSpark、异步重叠和结构化输出的设计背景。可先读[中文问题导读](official-design.zh-CN.md)或 [English reading guide](official-design.md)，再回来核对本表中的固定版本源码。
+
+文章明确说明，KVCache 管理和负载均衡组件与内部基础设施耦合，尚未完整开源。上表中的引擎内缓存与调度入口不代表完整服务组件；请求负载均衡也不同于 `eplb/policy.py` 中的专家放置与副本策略。文章提到的 API 解析属于另一个独立项目 `deepseek-recipe`，不能据此归为 DeepInfer 内置模块。

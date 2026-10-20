@@ -8,7 +8,9 @@
 
 ## 1. 先建立职责边界
 
-![DeepInfer 架构：请求入口、调度、状态管理、执行协调与结果返回](assets/diagrams/architecture.png)
+![DeepInfer 课程地图：引擎编排、状态管理、调度协作与专家路由](assets/diagrams/architecture.png)
+
+图中的四层是课程的组织方式。下面按请求经过的职责来读：入口与执行协调属于引擎编排，状态管理跨越多个阶段，调度决定本轮工作，专家路由位于执行链内部。它们是观察同一框架的两种视角。
 
 读框架时，先回答四个问题：
 
@@ -46,6 +48,8 @@ $$
 $$
 
 $\mathcal{A}_t$ 是第 $t$ 轮准入的请求集合，$q_i$ 是请求 $i$ 本轮安排处理的输入位置数，$B_t$ 是教学抽象中的 token 预算。$q_i$ 不是请求最终要输出的总长度。
+
+这里的 **prefill** 处理已有输入，为后续生成建立状态；**decode** 利用已有状态继续生成；**chunk** 是一次处理的输入分块；**draft** 是等待验证的候选序列。已有状态、本轮处理的位置和刚刚确定的输出，需要分别记录。
 
 实际调度还受序列状态、可分配块、阶段限制、分块边界与参与者之间的协调约束。Prefill 可以拆成多个 chunk；包含 draft 验证的轮次也不能按每请求一个 token 理解。因此这个不等式只表达一项约束，不是一套完整调度策略，也不是耗时公式。
 
@@ -99,3 +103,5 @@ Dispatch 为选中的专家组织 token 表示；combine 恢复 token 对应关�
 结合 [`v4_modules/moe.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/moe.py)、[`v4_modules/mlp.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/mlp.py) 和 [`rebalance_experts_global`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73) 阅读。把逻辑专家 ID、物理放置和 token 到结果的对应关系分别记账。
 
 继续查看[固定版本源码地图](source-map.md)。对每个模块，先确认输入、持有的状态、输出与释放时机，再进入具体优化。
+
+想进一步理解这些边界为什么这样设计，可接着读[官方系统设计导读](official-design.zh-CN.md)，或打开网站的[可切换架构图解](https://learn-deepinfer.github.io/zh/layers/)。导读将官方生产系统的设计描述与固定开源版本分开对照。

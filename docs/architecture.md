@@ -8,7 +8,9 @@ The diagrams summarize relationships. The equations express teaching constraints
 
 ## 1. Start with responsibility boundaries
 
-![DeepInfer architecture: request entry, scheduling, state management, execution coordination, and outputs](assets/diagrams/architecture.png)
+![DeepInfer course map: engine coordination, state management, scheduling, and expert routing](assets/diagrams/architecture.png)
+
+The diagram groups lessons into four layers. The table below follows responsibilities along a request: entry and execution coordination sit within engine coordination, state spans stages, scheduling selects work, and expert routing sits inside execution. These are two views of the same framework.
 
 Read the framework through four questions:
 
@@ -46,6 +48,8 @@ $$
 $$
 
 Here $\mathcal{A}_t$ is the set admitted in round $t$, $q_i$ is the number of input positions scheduled for request $i$ in that round, and $B_t$ is a teaching token budget. It is not the request's entire remaining output length.
+
+**Prefill** processes existing input to establish state; **decode** continues generation using that state. A **chunk** is a portion of input processed together, and a **draft** is a candidate sequence awaiting verification. Keep existing state, positions processed this round, and newly confirmed output separate.
 
 The actual scheduler also considers sequence status, allocatable blocks, phase-specific limits, chunk boundaries, and coordination between participants. Prefill work can be chunked. Draft verification can make a request's work differ from a single-token decode step. The inequality is therefore one constraint, not a complete scheduling policy or a timing formula.
 
@@ -99,3 +103,5 @@ Dispatch organizes the representations for the selected experts. Combine restore
 Read [`v4_modules/moe.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/moe.py), [`v4_modules/mlp.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/mlp.py), and [`rebalance_experts_global`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73) together. Trace logical expert IDs, physical placements, and token-to-result correspondence as separate records.
 
 Continue with the [pinned source map](source-map.md). For every module, identify its input, owned state, output, and release point before reading its optimizations.
+
+For the reasons behind these boundaries, read the [official system design guide](official-design.md) or explore the website's [switchable architecture diagrams](https://learn-deepinfer.github.io/en/layers/). The guide distinguishes the production design described in the official article from the pinned open-source implementation.

@@ -294,6 +294,16 @@ export const lessons: Lesson[] = [
           "zh": "后处理把采样结果写回序列，更新接受位置、结束标记和对外输出。开启 ZOS 时，这部分工作可能在下一轮前向发出后进行。阅读时区分采样已产生、状态已落账和结果已发布三个时刻，才能解释为什么一轮返回的输出未必来自当前采样。",
           "en": "Post-processing commits sampling results to sequences, including accepted positions, stop flags, and public outputs. With ZOS, it may run after the next round’s forward is launched. Distinguish produced samples, committed state, and published outputs to explain why a round can return results from earlier sampling."
         }
+      },
+      {
+        "heading": {
+          "zh": "结构化输出还维护一份语法状态",
+          "en": "Structured output carries grammar state"
+        },
+        "body": {
+          "zh": "**官方生产设计**：[官方部署文章](https://zhuanlan.zhihu.com/p/2095560295930508953)将结构化输出放进生成链路：已确认的前缀决定当前语法状态，状态再决定下一步的合法 token 集合。采样必须遵守这份集合。它约束输出的语法与结构，字段内容是否符合事实仍由具体任务决定。 **开源核对**：固定版本的 [sampler.py](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/layers/sampler.py#L351)先把已接受的 token 推进请求自己的 matcher，再为各个 draft 位置临时推进状态、生成 mask，最后回滚临时推进。mask 在[采样与 draft 验证之前](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/layers/sampler.py#L433)应用，因此语法状态也必须遵守“只有确认的前缀才能长期保留”的规则。",
+          "en": "**Official production design**: The [official deployment article](https://zhuanlan.zhihu.com/p/2095560295930508953) places structured output inside generation: the confirmed prefix determines the grammar state, which determines the legal next-token set. Sampling must respect that set. This constrains syntax and structure; factual correctness of field values still depends on the task. **Public-code check**: The pinned [sampler.py](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/layers/sampler.py#L351) advances each request’s matcher with accepted tokens, temporarily advances through draft positions to build masks, then rolls those temporary advances back. Masks apply [before sampling and draft verification](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/layers/sampler.py#L433). Grammar state follows the same rule as other request state: only the confirmed prefix persists."
+        }
       }
     ],
     "exercise": {
@@ -526,6 +536,16 @@ export const lessons: Lesson[] = [
           "zh": "上游前缀复用示例先计算共同的 cached prefix，再通过 scheduler.fork_seq 构建后续请求，展示了显式分叉与状态复用。它不能单独证明发布版包含任意请求自动检索的完整 KV 服务。阅读时将分叉机制、前缀索引、跨机器传输与服务级淘汰分开；本课仅讲共享与生命周期这条主线。",
           "en": "The upstream prefix-reuse example computes a common cached prefix and uses scheduler.fork_seq to create later requests, demonstrating explicit forks and state reuse. This alone does not establish a complete KV service with automatic lookup for arbitrary requests. Separate the fork mechanism from prefix indexing, cross-machine transfer, and service-level eviction. This lesson follows sharing and lifetime management only."
         }
+      },
+      {
+        "heading": {
+          "zh": "前缀块命中后，还要确认 SWA 状态",
+          "en": "A prefix hit still needs ready SWA state"
+        },
+        "body": {
+          "zh": "**官方生产设计**：[官方部署文章](https://zhuanlan.zhihu.com/p/2095560295930508953)区分前缀 KV 块命中与滑动窗口注意力（SWA）状态就绪。部分 SWA 状态没有随前缀保存时，可以回放有限长度的后缀，近似恢复继续执行所需的窗口状态。读这类方案时要同时追踪命中位置、状态有效范围和回放边界，不能仅凭块命中就直接开始 decode。 **开源核对**：[StateBlock](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L221)明确区分保存与丢弃的状态，并注明 consumer SWA 依赖 prefill 重算；[截断元数据入口](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/input_metadata/prepare_tensor_input_v4.cpp#L348)要求保留后缀覆盖 SWA 窗口与回退余量。公开版本包含这些恢复机制，但 [README](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L38)仍将完整 KV cache 服务列为未提供的基础设施，不能据此推断完整的生产前缀检索与恢复服务已经开源。",
+          "en": "**Official production design**: The [official deployment article](https://zhuanlan.zhihu.com/p/2095560295930508953) distinguishes a prefix KV-block hit from ready sliding-window attention (SWA) state. When some SWA state was not retained with the prefix, a bounded suffix can be replayed to approximately recover the window state needed to continue. Track the hit position, valid state range, and replay boundary together before starting decode. **Public-code check**: [StateBlock](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L221) separates stored and dropped state and states that consumer SWA recovery depends on prefill recomputation. The [truncation metadata entry](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/input_metadata/prepare_tensor_input_v4.cpp#L348) requires the retained suffix to cover the SWA window plus backtracking allowance. These recovery mechanisms are public, while the [README](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L38) still lists a complete KV cache service as missing infrastructure. They do not establish that the full production prefix-lookup and recovery service is released."
+        }
       }
     ],
     "exercise": {
@@ -584,6 +604,16 @@ export const lessons: Lesson[] = [
           "zh": "上游将 DSpark 与 confidence-scheduled verification 配合使用。mtp_varlen.hpp 根据候选接受率估计与执行成本模型选择总 query 预算，再分配到各请求，而不是给每条请求固定相同草稿长度。这里的教学伪代码标出预算、验证、采样和落账的边界，具体选择策略应回到上游核对。",
           "en": "Upstream combines DSpark with confidence-scheduled verification. mtp_varlen.hpp chooses a total query budget using candidate-acceptance estimates and execution-cost models, then distributes it across requests rather than fixing one draft length for everyone. This pseudocode marks budgeting, verification, sampling, and commit boundaries; inspect upstream for the concrete policy."
         }
+      },
+      {
+        "heading": {
+          "zh": "置信度决定验证机会，验证决定接受结果",
+          "en": "Confidence schedules verification; verification decides acceptance"
+        },
+        "body": {
+          "zh": "**官方生产设计**：[官方部署文章](https://zhuanlan.zhihu.com/p/2095560295930508953)中的 DSpark 将候选置信度用于变长验证：同一轮预算内，不同请求可以得到不同数量的验证位置。置信度是候选被接受的估计；它可以影响哪些候选值得验证，却不能直接把未验证的草稿变成正式输出。最终提交仍取决于目标模型的验证与采样规则。 **开源核对**：[MTPVarlen.schedule](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/mtp_varlen.hpp#L160)为总预算选择和逐请求长度分配维护不同的接受率队列与历史快照，并明确要求后面候选的置信度不能反向决定前面候选是否被验证。预算确定后，[剩余验证位置按接受率排序分配](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/mtp_varlen.hpp#L251)。阅读时把置信度估计、query 长度、实际接受长度分开，才能理解变长验证与状态回退如何配合。",
+          "en": "**Official production design**: DSpark in the [official deployment article](https://zhuanlan.zhihu.com/p/2095560295930508953) uses candidate confidence for variable-length verification: requests can receive different numbers of verification positions within one round’s budget. Confidence estimates acceptance. It can prioritize candidates for verification, but cannot turn an unverified draft into committed output. Target-model verification and sampling rules still determine what is accepted. **Public-code check**: [MTPVarlen.schedule](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/mtp_varlen.hpp#L160) maintains separate acceptance-rate queues and historical snapshots for total-budget selection and per-request lengths. It explicitly requires later candidates’ confidence not to determine whether an earlier candidate is verified. Once the budget is selected, [remaining verification positions are allocated by acceptance-rate order](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/mtp_varlen.hpp#L251). Keep confidence estimates, query lengths, and accepted lengths separate when tracing verification and rollback."
+        }
       }
     ],
     "exercise": {
@@ -641,6 +671,16 @@ export const lessons: Lesson[] = [
         "body": {
           "zh": "上一轮尚未后处理时，控制侧序列长度可能落后一拍，尤其草稿接受数还未落账。上游 _correct_seqlens_qk 根据采样结果修正长度与输入，并约束前向路径的同步边界。伪代码用于阅读依赖关系，具体事件、元数据和状态所有权应沿 Worker 的实现核对。",
           "en": "Before previous-step post-processing, control-side sequence lengths can lag, especially while draft-acceptance counts are uncommitted. Upstream _correct_seqlens_qk corrects lengths and inputs from sampling results and constrains synchronization boundaries. Use the pseudocode to read dependencies, then inspect Worker for events, metadata, and ownership."
+        }
+      },
+      {
+        "heading": {
+          "zh": "跨轮重叠要保留完成事件与状态所有权",
+          "en": "Cross-round overlap retains events and state ownership"
+        },
+        "body": {
+          "zh": "**官方生产设计**：[官方部署文章](https://zhuanlan.zhihu.com/p/2095560295930508953)把调度、执行与结果处理放到跨轮流水线中重叠。理解这条时间线时，每个阶段都要标出它消费哪一轮数据、由谁持有结果，以及哪些状态尚未提交。下一轮前向已经发出，不代表上一轮结果已经对请求层可见。 **开源核对**：[WorkerStepState 的构造](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L167)把采样结果与完成事件一起保留；[_post_process_step](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L247)等待该事件后才消费结果并回调引擎。ZOS decode 将这份状态交给下一轮，结束时再由 flush 排空。因此重叠既需要前向与后处理的先后安排，也需要明确的就绪信号和在途状态生命周期。",
+          "en": "**Official production design**: The [official deployment article](https://zhuanlan.zhihu.com/p/2095560295930508953) overlaps scheduling, execution, and result processing across rounds. Annotate which round each stage consumes, who owns its results, and which state remains uncommitted. Launching the next forward does not mean the previous result is already visible to the request layer. **Public-code check**: [WorkerStepState construction](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L167) retains sampling results together with a completion event. [_post_process_step](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L247) waits for that event before consuming results and calling the engine. ZOS decode passes this state to the following round, and flush drains it at the end. Overlap therefore needs readiness signals and an explicit lifetime for in-flight state as well as stage ordering."
         }
       }
     ],
@@ -757,6 +797,16 @@ export const lessons: Lesson[] = [
         "body": {
           "zh": "policy.py 根据历史计数提出副本分配与布局，运行时还要维护计数、通信、参数迁移和逻辑到物理映射。历史窗口中的热点不保证延续到下一窗口，因此要把策略输入、布局输出和后续路由分开阅读。最大 token 负载只是布局决策的一项代理信息，不等于整个框架的执行表现。",
           "en": "policy.py proposes replica counts and placement from historical counts; runtime responsibilities include counting, communication, parameter movement, and logical-to-physical mapping. Hotspots can change between windows. Read policy input, layout output, and later routing separately. Maximum token load is a proxy for placement decisions, not the behavior of the whole framework."
+        }
+      },
+      {
+        "heading": {
+          "zh": "请求负载均衡与 EPLB 管的是不同对象",
+          "en": "Request balancing and EPLB act on different objects"
+        },
+        "body": {
+          "zh": "**官方生产设计**：[官方部署文章](https://zhuanlan.zhihu.com/p/2095560295930508953)中的请求负载均衡决定请求交给哪组服务实例，在 prefill 与 decode 的服务副本之间分配工作。EPLB 则作用于专家执行内部，安排 logical expert 的 physical 副本及其位置。一条请求选中了服务副本之后，其中的 token 仍可能经过专家路由；这两层决策需要各自的状态与统计。 **开源核对**：[rebalance_experts_global](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73)接收专家历史 token 计数，输出专家副本数与逻辑、物理映射，验证的是 EPLB 策略。[README](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L38)明确将 prefill 和 decode 的数据并行副本负载均衡列为未提供的服务基础设施。因此不能把公开的 EPLB 策略或单个引擎的 Scheduler 当作完整生产请求负载均衡器。",
+          "en": "**Official production design**: Request balancing in the [official deployment article](https://zhuanlan.zhihu.com/p/2095560295930508953) chooses which serving-instance group receives a request and distributes work among prefill and decode service replicas. EPLB acts inside expert execution, choosing physical replicas of logical experts and their placement. After a request reaches a service replica, its tokens can still undergo expert routing. These decisions require separate state and statistics. **Public-code check**: [rebalance_experts_global](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73) consumes historical expert token counts and returns replica counts and logical/physical maps, establishing the EPLB policy. The [README](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L38) explicitly lists balancing across data-parallel prefill and decode replicas as missing service infrastructure. The public EPLB policy and a single engine’s Scheduler therefore do not establish a complete production request load balancer."
         }
       }
     ],
