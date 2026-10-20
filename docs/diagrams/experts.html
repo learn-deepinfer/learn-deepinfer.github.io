@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>Top-k expert routing — Learn DeepInfer</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { color-scheme: light; --paper: #f5f4ef; --ink: #202d29; --green: #19654e; --gold: #ac793b; --muted: #78817a; }
+    html, body { width: 1200px; height: 760px; margin: 0; overflow: hidden; }
+    body { background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    .canvas { width: 1200px; height: 760px; padding: 43px 54px 0; position: relative; }
+    .eyebrow, .mono, .footer { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .eyebrow { color: var(--green); font-size: 11px; font-weight: 600; letter-spacing: 1.85px; }
+    h1 { margin: 13px 0 11px; font-size: 43px; line-height: 1.1; font-weight: 620; letter-spacing: -1.8px; }
+    .subtitle { margin: 0; color: #69736c; font-size: 15px; line-height: 1.5; }
+    .small-note { position: absolute; right: 54px; top: 49px; color: #8b948a; text-align: right; font-size: 9px; letter-spacing: 1px; line-height: 1.9; }
+    .small-note b { color: #647b68; font-weight: 500; }
+    .stage { width: 1092px; height: 368px; margin-top: 35px; position: relative; }
+    .connections { position: absolute; inset: 0; width: 1092px; height: 368px; overflow: visible; }
+    .node { position: absolute; z-index: 1; }
+    .section-label { font-size: 9px; color: #8b968b; letter-spacing: 1.3px; position: absolute; top: 0; }
+    .token { left: 0; top: 120px; width: 130px; height: 137px; border: 1px solid #d9e1d4; border-radius: 19px; background: #fafbf7; padding: 18px; }
+    .token .mono { font-size: 9px; color: #8a9589; letter-spacing: 1px; }
+    .vector { height: 40px; margin: 15px 0 12px; display: flex; align-items: center; gap: 5px; }
+    .vector i { display: block; width: 7px; border-radius: 3px; background: #abc5ae; }
+    .token .math { font-family: Georgia, "Times New Roman", serif; font-size: 20px; font-style: italic; color: var(--green); }
+    .token .math span { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; font-style: normal; color: #8e988c; margin-left: 7px; }
+    .router { left: 190px; top: 79px; width: 204px; height: 218px; padding: 21px; background: #fffefa; border: 1px solid #c8d7c8; border-radius: 19px; box-shadow: 0 6px 16px rgba(42,70,39,.025); }
+    .router h2 { margin: 0; font-size: 21px; font-weight: 560; letter-spacing: -.4px; }
+    .router-top { display: flex; justify-content: space-between; align-items: center; }
+    .topk { background: #e7f0e6; border: 1px solid #d6e5d4; border-radius: 5px; padding: 4px 6px; font-size: 9px; color: var(--green); }
+    .router p { margin: 7px 0 18px; color: #899286; font-size: 10px; }
+    .score { display: grid; grid-template-columns: 22px 1fr 28px; gap: 9px; align-items: center; margin: 13px 0; font-size: 10px; color: #52705c; }
+    .score .bar { height: 5px; background: #ebeee6; border-radius: 6px; overflow: hidden; }
+    .score .bar i { display: block; height: 100%; width: 70%; background: var(--green); border-radius: inherit; }
+    .score.gold { color: #9b784e; }
+    .score.gold .bar i { background: #c69b64; width: 30%; }
+    .score.inactive { color: #b6bdb2; }
+    .score.inactive .bar i { width: 12%; background: #d5dbd0; }
+    .router-bottom { font-size: 8px; color: #9ca496; border-top: 1px solid #ebeee6; margin-top: 15px; padding-top: 10px; letter-spacing: .35px; }
+    .expert { left: 496px; width: 237px; height: 100px; padding: 20px 21px; border-radius: 17px; border: 1px solid #c4d7c5; background: #fbfdf8; }
+    .expert.e0 { top: 18px; }
+    .expert.e2 { top: 251px; background: #fdfaf4; border-color: #e0cfb5; }
+    .expert.e1 { top: 146px; height: 77px; padding-top: 16px; background: transparent; border: 1px dashed #d7ded0; opacity: .58; }
+    .expert-top { display: flex; align-items: center; justify-content: space-between; }
+    .expert h3 { font-size: 18px; letter-spacing: -.4px; font-weight: 550; margin: 0; color: var(--green); }
+    .expert.e2 h3 { color: #967044; }
+    .expert.e1 h3 { color: #8f9a88; font-size: 15px; }
+    .rank { color: #6b896f; background: #e8f0e4; padding: 4px 6px; border-radius: 5px; font-size: 8px; }
+    .e2 .rank { background: #f0e7d7; color: #a18155; }
+    .e1 .rank { background: transparent; color: #a4ad9d; }
+    .expert p { margin: 13px 0 0; font-size: 10px; color: #8b9783; }
+    .e2 p { color: #ac9c83; }
+    .e1 p { margin-top: 8px; color: #a4ad9d; font-size: 9px; }
+    .expert p .math { font-family: Georgia, "Times New Roman", serif; font-style: italic; color: #708e6b; margin-left: 7px; font-size: 14px; }
+    .e2 p .math { color: #b18f59; }
+    .packet { position: absolute; z-index: 2; width: 28px; height: 28px; display: grid; place-items: center; background: #f5f8ef; border: 1px solid #b6cbb6; border-radius: 9px; font-family: Georgia, "Times New Roman", serif; font-style: italic; color: #487951; font-size: 16px; }
+    .packet.p0 { left: 439px; top: 105px; transform: rotate(-10deg); }
+    .packet.p2 { left: 439px; top: 250px; transform: rotate(10deg); color: #aa8654; border-color: #dac6a4; background: #faf5e9; }
+    .copy-label { position: absolute; top: 174px; left: 426px; color: #9ba391; font-size: 8px; text-align: center; line-height: 1.5; letter-spacing: .1px; }
+    .weight-label { position: absolute; z-index: 2; left: 761px; color: #648b66; font-size: 10px; background: var(--paper); padding: 3px 4px; }
+    .weight-label.w0 { top: 91px; }
+    .weight-label.w2 { top: 271px; color: #aa8754; }
+    .combine { left: 814px; top: 99px; width: 278px; height: 181px; padding: 24px; border: 1px solid #c3d3c0; border-radius: 19px; background: #fffefa; }
+    .combine .mono { font-size: 9px; color: #8d9d87; letter-spacing: .8px; }
+    .combine h2 { font-size: 20px; font-weight: 560; margin: 11px 0 8px; letter-spacing: -.5px; }
+    .combine p { margin: 0; font-size: 11px; color: #8b9585; }
+    .combine-output { margin-top: 23px; display: flex; gap: 7px; align-items: center; }
+    .contribution { height: 22px; border-radius: 6px; background: #dfecdd; flex: 7; }
+    .contribution.gold { background: #e9d7ba; flex: 3; }
+    .combine-output .math { margin-left: 8px; color: #52794c; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 22px; }
+    .lower { display: flex; align-items: center; justify-content: space-between; margin-top: 23px; gap: 35px; }
+    .scope { color: #8b9487; font-size: 11px; line-height: 1.8; margin: 0; max-width: 505px; }
+    .scope b { color: #63785d; font-weight: 500; }
+    .formula { text-align: right; }
+    .formula .mono { color: #8c9a85; font-size: 9px; letter-spacing: 1.35px; margin-bottom: 10px; }
+    .equation { font-family: Georgia, "Times New Roman", serif; color: #365d3e; font-size: 31px; letter-spacing: -.3px; white-space: nowrap; }
+    .equation .math { font-style: italic; }
+    .equation sub { font-size: 17px; vertical-align: -4px; }
+    .equation .gold { color: #a47d48; }
+    .equation .operator { color: #8f9d85; padding: 0 5px; font-size: 25px; }
+    .footer { position: absolute; bottom: 24px; left: 54px; right: 54px; border-top: 1px solid #dce1d8; padding-top: 16px; color: #79867a; font-size: 9px; letter-spacing: 1.6px; display: flex; justify-content: space-between; }
+    .footer span:last-child { color: #9ca49a; letter-spacing: .8px; }
+  </style>
+</head>
+<body>
+  <main class="canvas" aria-label="One token routed to two experts and combined with weights 0.7 and 0.3">
+    <header>
+      <div class="eyebrow">MECHANISM 11—12 / EXPERT ROUTING</div>
+      <h1>One token. Two expert paths.</h1>
+      <p class="subtitle">Select logical experts, send copies of the same token, then merge their weighted outputs.</p>
+      <div class="small-note mono">ROUTED EXPERTS<br><b>TOP-K = 2</b></div>
+    </header>
+
+    <section class="stage" aria-label="Token to router to experts to weighted combine">
+      <svg class="connections" viewBox="0 0 1092 368" aria-hidden="true">
+        <defs>
+          <marker id="arrow-green" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#7da17d" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+          <marker id="arrow-gold" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#c2a372" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+        </defs>
+        <path d="M130 188 H186" stroke="#8da88a" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+        <path d="M394 188 C448 188 444 68 491 68" stroke="#91ad8b" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+        <path d="M394 188 C448 188 444 301 491 301" stroke="#c5ad83" stroke-width="1.5" fill="none" marker-end="url(#arrow-gold)"/>
+        <path d="M733 68 C783 68 770 151 810 151" stroke="#91ad8b" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+        <path d="M733 301 C783 301 770 231 810 231" stroke="#c5ad83" stroke-width="1.5" fill="none" marker-end="url(#arrow-gold)"/>
+      </svg>
+
+      <div class="section-label mono" style="left:0;top:81px">INPUT</div>
+      <div class="node token">
+        <div class="mono">TOKEN VECTOR</div>
+        <div class="vector" aria-hidden="true"><i style="height:20px"></i><i style="height:34px"></i><i style="height:27px"></i><i style="height:13px"></i><i style="height:39px"></i><i style="height:24px"></i><i style="height:31px"></i><i style="height:17px"></i></div>
+        <div class="math">x <span>one token</span></div>
+      </div>
+
+      <div class="node router">
+        <div class="router-top"><h2>Router</h2><span class="topk mono">top-k 2</span></div>
+        <p>Illustrative routing weights</p>
+        <div class="score mono"><span>E0</span><div class="bar"><i></i></div><span>0.7</span></div>
+        <div class="score gold mono"><span>E2</span><div class="bar"><i></i></div><span>0.3</span></div>
+        <div class="score inactive mono"><span>E1</span><div class="bar"><i></i></div><span>—</span></div>
+        <div class="router-bottom mono">TWO SELECTED · ONE INPUT</div>
+      </div>
+
+      <div class="packet p0" aria-label="First copy of token x">x</div>
+      <div class="packet p2" aria-label="Second copy of token x">x</div>
+      <div class="copy-label mono">SAME<br>TOKEN</div>
+
+      <div class="node expert e0">
+        <div class="expert-top"><h3>Expert 0</h3><span class="rank mono">RANK A</span></div>
+        <p>Selected computation <span class="math">E<sub>0</sub>(x)</span></p>
+      </div>
+      <div class="node expert e1">
+        <div class="expert-top"><h3>Expert 1</h3><span class="rank mono">NOT SELECTED</span></div>
+        <p>No copy of this token is dispatched here.</p>
+      </div>
+      <div class="node expert e2">
+        <div class="expert-top"><h3>Expert 2</h3><span class="rank mono">RANK B</span></div>
+        <p>Selected computation <span class="math">E<sub>2</sub>(x)</span></p>
+      </div>
+
+      <div class="weight-label w0 mono">× 0.7</div>
+      <div class="weight-label w2 mono">× 0.3</div>
+      <div class="node combine">
+        <div class="mono">RETURN &amp; MERGE</div>
+        <h2>Weighted combine</h2>
+        <p>Restore token correspondence.</p>
+        <div class="combine-output" aria-hidden="true"><span class="contribution"></span><span class="contribution gold"></span><span class="math">y</span></div>
+      </div>
+    </section>
+
+    <div class="lower">
+      <p class="scope"><b>Logical experts are distinct from physical replicas.</b><br>Shared experts and model-specific routing rules are omitted.<br>Replica placement is a separate load-balancing concern.</p>
+      <div class="formula">
+        <div class="mono">ONE TOKEN · COMBINED OUTPUT</div>
+        <div class="equation" aria-label="y equals 0.7 E zero of x plus 0.3 E two of x"><span class="math">y</span><span class="operator">=</span>0.7<span class="math">E</span><sub>0</sub>(<span class="math">x</span>)<span class="operator">+</span><span class="gold">0.3<span class="math">E</span><sub>2</sub>(<span class="math">x</span>)</span></div>
+      </div>
+    </div>
+    <footer class="footer"><span>LEARN DEEPINFER / CONCEPT GUIDE</span><span>CONCEPTUAL TOP-K ROUTING · NORMALIZED EXAMPLE</span></footer>
+  </main>
+</body>
+</html>

@@ -32,8 +32,9 @@
 .il-code-label { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; white-space: nowrap; color: var(--il-muted); }
 .il-content { padding-bottom: 21px; }
 .il-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 17px; margin-bottom: 24px; }
-.il-stage { position: relative; display: flex; align-items: center; gap: 7px; justify-content: center; min-height: 38px; background: var(--il-soft); border: 1px solid var(--il-border); border-radius: 6px; color: var(--il-muted); transition: border-color .2s, background .2s, color .2s; font-size: 11px; }
+.il-stage { position: relative; display: flex; align-items: center; gap: 7px; justify-content: center; min-height: 38px; background: var(--il-soft); border: 1px solid var(--il-border); border-radius: 6px; color: var(--il-muted); transition: border-color .4s, background .4s, color .4s; font-size: 11px; }
 .il-stage.is-active { border-color: color-mix(in srgb, var(--il-orange) 42%, transparent); background: color-mix(in srgb, var(--il-orange) 7%, var(--il-bg)); color: var(--il-orange); }
+.il-stage-indicator { position: absolute; height: 2px; width: 21px; bottom: -6px; left: calc(50% - 10.5px); border-radius: 2px; background: var(--il-orange); }
 .il-stage-num { font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .65; }
 .il-stage-arrow { position: absolute; inset-inline-end: -16px; top: 12px; color: var(--il-muted); opacity: .55; }
 .il-stage-arrow svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.4; }
@@ -42,7 +43,7 @@
 .il-tiny { font-size: 10px; font-weight: 400; color: var(--il-muted); }
 .il-sequence-panel { padding: 17px 19px; border: 1px solid var(--il-border); border-radius: 8px; background: var(--il-bg); }
 .il-token-stream { display: flex; align-items: center; gap: 7px; min-height: 40px; }
-.il-token { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 36px; padding: 0 9px; border: 1px solid var(--il-border); border-radius: 5px; color: var(--il-text); background: var(--il-soft); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; transition: background .2s, border-color .2s, color .2s; }
+.il-token { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 36px; padding: 0 9px; border: 1px solid var(--il-border); border-radius: 5px; color: var(--il-text); background: var(--il-soft); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; transition: background .4s, border-color .4s, color .4s, opacity .4s; }
 .il-token--input { background: color-mix(in srgb, var(--il-blue) 6%, var(--il-bg)); border-color: color-mix(in srgb, var(--il-blue) 18%, transparent); color: var(--il-blue); }
 .il-token--new, .il-token--draft { background: color-mix(in srgb, var(--il-orange) 8%, var(--il-bg)); border-color: color-mix(in srgb, var(--il-orange) 26%, transparent); color: var(--il-orange); }
 .il-token--empty { color: var(--il-muted); background: transparent; border-style: dashed; }
@@ -57,10 +58,11 @@
 .il-cache-count > span { color: var(--il-muted); font-size: 9px; }
 .il-cache-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
 .il-cache-kind { font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--il-muted); width: 12px; }
-.il-cache-cell { flex: 1; max-width: 62px; height: 22px; border-radius: 3px; border: 1px dashed var(--il-border); color: var(--il-muted); display: grid; place-items: center; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; transition: background .2s; }
+.il-cache-cell { flex: 1; max-width: 62px; height: 22px; border-radius: 3px; border: 1px dashed var(--il-border); color: var(--il-muted); display: grid; place-items: center; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; transition: background .4s, border-color .4s, color .4s; }
 .il-cache-cell.is-stored { background: color-mix(in srgb, var(--il-blue) 9%, var(--il-bg)); border: 1px solid color-mix(in srgb, var(--il-blue) 15%, transparent); color: var(--il-blue); }
 .il-cache-cell.is-added { background: color-mix(in srgb, var(--il-green) 10%, var(--il-bg)); border: 1px solid color-mix(in srgb, var(--il-green) 20%, transparent); color: var(--il-green); }
-.il-explanation { margin: 20px 0 0; color: var(--il-muted); font-size: 11px; line-height: 1.8; min-height: 20px; }
+.il-explanation { margin: 20px 0 0; color: var(--il-muted); font-size: 11px; line-height: 1.8; min-height: 40px; animation: il-description-in .28s ease-out both; }
+@keyframes il-description-in { from { opacity: .45; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .il-inline-cache { display: inline-block; margin-top: 10px; color: var(--il-muted); font-size: 10px; }
 .il-inline-cache b { color: var(--il-green); font-weight: 500; margin-inline: 5px; }
 .il-controls { display: flex; align-items: center; gap: 12px; min-height: 63px; padding-block: 13px; background: color-mix(in srgb, var(--il-soft) 60%, var(--il-bg)); border-top: 1px solid var(--il-border); }
@@ -82,7 +84,7 @@
 .il-comparison-card { padding: 16px; border: 1px solid var(--il-border); border-radius: 8px; }
 .il-comparison-card.is-efficient { border-color: color-mix(in srgb, var(--il-green) 28%, var(--il-border)); background: color-mix(in srgb, var(--il-green) 2%, var(--il-bg)); }
 .il-compute-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-.il-compute-cell { border: 1px dashed var(--il-border); color: var(--il-muted); border-radius: 4px; text-align: center; padding-block: 9px; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 45px; }
+.il-compute-cell { border: 1px dashed var(--il-border); color: var(--il-muted); border-radius: 4px; text-align: center; padding-block: 9px; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 45px; transition: background .4s, color .4s, border-color .4s; }
 .il-compute-cell small { display: block; font: 8px system-ui, sans-serif; margin-top: 4px; }
 .il-compute-cell.is-computed { color: var(--il-orange); border: 1px solid color-mix(in srgb, var(--il-orange) 22%, transparent); background: color-mix(in srgb, var(--il-orange) 7%, var(--il-bg)); }
 .il-compute-cell.is-reused { color: var(--il-green); border: 1px solid color-mix(in srgb, var(--il-green) 22%, transparent); background: color-mix(in srgb, var(--il-green) 7%, var(--il-bg)); }
@@ -95,14 +97,14 @@
 .il-batch-top > div { display: flex; gap: 5px; }
 .il-batch-top .il-token { height: 27px; font-size: 10px; }
 .il-slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.il-slot { border: 1px solid var(--il-border); border-radius: 7px; padding: 12px; min-height: 132px; background: var(--il-soft); }
+.il-slot { border: 1px solid var(--il-border); border-radius: 7px; padding: 12px; min-height: 132px; background: var(--il-soft); transition: background .4s, border-color .4s; }
 .il-slot.is-vacant { border-style: dashed; background: transparent; }
 .il-slot-label { color: var(--il-muted); font: 8px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .05em; }
 .il-request-title { display: flex; align-items: baseline; gap: 5px; margin-top: 15px; font-size: 10px; white-space: nowrap; }
 .il-request-title b { color: var(--il-blue); font: 17px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.il-request-state { margin-inline-start: auto; font-size: 8px; color: var(--il-muted); }
+.il-request-state { margin-inline-start: auto; font-size: 8px; color: var(--il-muted); transition: color .4s; }
 .il-request-steps { display: flex; gap: 4px; margin-top: 12px; margin-bottom: 5px; }
-.il-request-steps > span { height: 4px; flex: 1; border-radius: 2px; background: var(--il-border); }
+.il-request-steps > span { height: 4px; flex: 1; border-radius: 2px; background: var(--il-border); transition: background .45s; }
 .il-request-steps > .is-filled { background: var(--il-blue); }
 .il-request-d .il-request-title b, .il-request-e .il-request-title b { color: var(--il-orange); }
 .il-request-d .il-request-steps > .is-filled, .il-request-e .il-request-steps > .is-filled { background: var(--il-orange); }
@@ -114,6 +116,7 @@
 .il-completed { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 41px; margin-top: 12px; font-size: 10px; color: var(--il-muted); }
 .il-completed > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .il-completed-request { background: color-mix(in srgb, var(--il-green) 7%, var(--il-bg)); color: var(--il-green); border-radius: 3px; padding: 3px 7px; font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.il-batch-top b, .il-request-title b, .il-completed-request b, .il-routed-token b { display: inline-block; font-weight: inherit; }
 .il-spec-row { display: flex; gap: 18px; align-items: center; }
 .il-spec-label { min-width: 102px; display: flex; align-items: center; gap: 8px; font-size: 10px; }
 .il-spec-label b { font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--il-muted); }
@@ -121,9 +124,9 @@
 .il-draft-item { text-align: center; flex: 1; }
 .il-draft-item .il-token { width: 100%; }
 .il-draft-item > small { display: block; color: var(--il-muted); font-size: 8px; margin-top: 6px; white-space: nowrap; }
-.il-verifier { margin-block: 20px; border: 1px solid var(--il-border); border-radius: 8px; display: flex; align-items: center; gap: 13px; padding: 16px; background: var(--il-soft); }
+.il-verifier { margin-block: 20px; border: 1px solid var(--il-border); border-radius: 8px; display: flex; align-items: center; gap: 13px; padding: 16px; background: var(--il-soft); transition: background .4s, border-color .4s; }
 .il-verifier.is-active { border-color: color-mix(in srgb, var(--il-green) 25%, var(--il-border)); }
-.il-verifier-icon { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--il-border); border-radius: 50%; color: var(--il-muted); }
+.il-verifier-icon { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--il-border); border-radius: 50%; color: var(--il-muted); transition: color .4s, border-color .4s; }
 .il-verifier.is-active .il-verifier-icon { color: var(--il-green); border-color: color-mix(in srgb, var(--il-green) 30%, transparent); }
 .il-verifier > div { flex: 1; }
 .il-verifier strong { font-size: 11px; font-weight: 500; }
@@ -138,7 +141,7 @@
 .il-routing-rule { display: flex; align-items: center; gap: 10px; margin-block: 20px; font-size: 9px; color: var(--il-muted); }
 .il-routing-line { flex: 1; height: 1px; background: var(--il-border); }
 .il-experts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.il-expert-card { border: 1px solid var(--il-border); border-radius: 6px; padding: 10px; }
+.il-expert-card { border: 1px solid var(--il-border); border-radius: 6px; padding: 10px; transition: border-color .45s, background .45s; }
 .il-expert-card .il-row-label { font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; margin-bottom: 12px; }
 .il-expert-card .il-row-label b { font-weight: 500; }
 .il-expert-card .il-row-label small { display: none; }
@@ -149,8 +152,10 @@
 .il-expert-inventory > .il-free-slot { border-style: dashed; background: transparent; color: var(--il-muted); }
 .il-expert-inventory > .il-replica { color: var(--il-green); background: color-mix(in srgb, var(--il-green) 6%, var(--il-bg)); border-color: color-mix(in srgb, var(--il-green) 23%, transparent); }
 .il-replica small { display: none; }
+.il-rank-tokens { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; min-height: 43px; padding-top: 8px; }
+.il-rank-tokens > span { display: inline-flex; position: relative; align-items: center; justify-content: center; min-width: 21px; padding: 2px 3px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--il-blue) 20%, var(--il-border)); background: color-mix(in srgb, var(--il-blue) 6%, var(--il-bg)); color: var(--il-blue); font: 8px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .il-load-track { display: flex; gap: 3px; margin-top: 12px; }
-.il-load-track > span { flex: 1; height: 5px; border-radius: 2px; background: var(--il-border); }
+.il-load-track > span { flex: 1; height: 5px; border-radius: 2px; background: var(--il-border); transition: background .45s; }
 .il-load-track > .is-loaded { background: var(--il-blue); }
 .il-expert-card.is-busy .il-load-track > .is-loaded { background: var(--il-orange); }
 .inference-lab--compact .il-title-row { padding-bottom: 19px; }

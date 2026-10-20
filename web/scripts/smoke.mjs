@@ -23,7 +23,9 @@ let checks = 0;
 page.on('pageerror', error => runtimeErrors.push(error.message));
 
 async function goto(path) {
-  await page.goto(`${base}${path}`);
+  const destination = new URL(path, `${base}/`);
+  if (!destination.pathname.endsWith('/')) destination.pathname += '/';
+  await page.goto(destination.href);
   await page.locator('.site-header').waitFor();
 }
 async function check(name, run) {
@@ -47,6 +49,28 @@ try {
     assert.equal(await page.locator('.lesson-card').count(), 12);
     assert.equal(await page.locator('.home-lab .inference-lab').count(), 1);
     assert.match(await page.locator('h1').innerText(), /Learn DeepInfer/);
+  });
+
+  await check('framework guide has no execution or download entry points', async () => {
+    for (const locale of ['zh', 'en']) {
+      for (const route of ['', 's01', 's01?tab=code', 's01?tab=source']) {
+        await goto(`/${locale}/${route}`);
+        assert.equal(await page.locator('.local-experiment, video, a[download], a[href^="/source/"]').count(), 0);
+        assert.equal(await page.locator('a[href$=".zip"]').count(), 0);
+        assert.doesNotMatch(await page.locator('main').innerText(), /\b(?:CPU|GPU|Qwen|FP32)\b|生成真实文本|Download Chapter|RUN ON YOUR COMPUTER/i);
+      }
+    }
+  });
+
+  await check('architecture follows all seven framework boundaries', async () => {
+    await goto('/en/layers');
+    assert.deepEqual(await page.locator('.source-pipeline code').allTextContents(), [
+      'LLM.generate', 'LLMEngine.step', 'Scheduler', 'Worker', 'ModelRunner', 'Sampling', 'State updates',
+    ]);
+    await goto('/en/s01?tab=code');
+    assert.match(await page.locator('[role="tabpanel"] .code-window').innerText(), /Framework pseudocode/);
+    await goto('/en/s10');
+    assert.match(await page.locator('.lesson-heading h1').innerText(), /Overlap the Pipeline/);
   });
 
   await check('start link opens lesson and all four tabs work', async () => {
@@ -112,7 +136,7 @@ try {
     assert.equal(await page.locator('.il-request-b.is-held').count(), 1);
     assert.equal(await page.locator('.il-request-c.is-held').count(), 1);
     assert.deepEqual(await page.locator('.il-slot .il-request-title b').allTextContents(), ['A', 'B', 'C']);
-    assert.deepEqual(await page.locator('.il-batch-top .il-token').allTextContents(), ['req D', 'req E']);
+    assert.deepEqual((await page.locator('.il-batch-top .il-token').allTextContents()).map(value => value.replace(/\s/g, ' ')), ['req D', 'req E']);
     assert.equal(await page.locator('.il-request-b .il-request-steps .is-filled').count(), 2);
     assert.equal(await page.locator('.il-completed-request').count(), 0);
     await next.click();
@@ -131,7 +155,11 @@ try {
   });
 
   for (const [mode, route, last, verify] of [
-    ['loop', 's01', 6, async () => assert.equal(await page.locator('.il-token--new').count(), 3)],
+    ['loop', 's01', 6, async () => {
+      assert.equal(await page.locator('.il-token--new').count(), 2);
+      assert.match(await page.locator('.il-cache-count').innerText(), /^4/);
+      assert.match(await page.locator('.il-stage.is-active').innerText(), /后处理/);
+    }],
     ['cache', 's03', 5, async () => assert.deepEqual(await page.locator('.il-compute-metric b').allTextContents(), ['8', '1'])],
     ['batch', 's06', 5, async () => { assert.equal(await page.locator('.il-completed-request').count(), 5); assert.equal(await page.locator('.il-slot.is-vacant').count(), 3); }],
     ['speculation', 's09', 3, async () => { assert.equal(await page.locator('.il-commit-row .il-token--accepted').count(), 2); assert.equal(await page.locator('.il-commit-row .il-token--new').count(), 1); }],
@@ -153,6 +181,27 @@ try {
       await counter(`01/${total}`);
     });
   }
+
+  await check('framework loop separates sampling, commit, and cache growth', async () => {
+    await goto('/en/s01?tab=lab');
+    assert.match(await page.locator('.il-demo-label').innerText(), /preset framework states/i);
+    const slider = page.getByRole('slider', { name: 'Demo step' });
+    await slider.focus();
+    await slider.press('ArrowRight');
+    await slider.press('ArrowRight');
+    await counter('03/07');
+    assert.equal(await page.locator('.il-token--new').count(), 1);
+    assert.match(await page.locator('.il-cache-count').innerText(), /^3/);
+    assert.match(await page.locator('.il-stage.is-active').innerText(), /Sample/);
+    await slider.press('ArrowRight');
+    await counter('04/07');
+    assert.match(await page.locator('.il-cache-count').innerText(), /^3/);
+    assert.match(await page.locator('.il-stage.is-active').innerText(), /Commit/);
+    await slider.press('ArrowRight');
+    await counter('05/07');
+    assert.equal(await page.locator('.il-token--new').count(), 1);
+    assert.match(await page.locator('.il-cache-count').innerText(), /^4/);
+  });
 
   await check('play advances, pause stops, and navigation cleans up timer', async () => {
     await goto('/zh/s01?tab=lab');

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>Inside a production inference round — Learn DeepInfer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f5f4ef;
+      --card: #fffefa;
+      --ink: #202d29;
+      --green: #19654e;
+      --muted: #748077;
+      --border: #d9dfd5;
+      --wash: #e9efe7;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 1200px; min-width: 1200px; height: 760px; background: var(--paper); }
+    body { color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    .diagram { width: 1200px; height: 760px; position: relative; overflow: hidden; isolation: isolate; }
+    .eyebrow { position: absolute; inset: 44px auto auto 64px; margin: 0; font-size: 11px; font-weight: 650; letter-spacing: 2.05px; color: var(--green); }
+    h1 { position: absolute; inset: 82px auto auto 64px; margin: 0; font-size: 37px; line-height: 1.15; font-weight: 600; letter-spacing: -1.45px; }
+    .subtitle { position: absolute; inset: 140px auto auto 65px; margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); letter-spacing: -.12px; }
+    .guide { position: absolute; right: 64px; top: 43px; padding: 10px 13px; border: 1px solid #b9cbbd; border-radius: 4px; font: 10px var(--mono); letter-spacing: .2px; color: var(--green); }
+    .wires { position: absolute; inset: 0; z-index: 0; overflow: visible; }
+    .card { position: absolute; top: 211px; height: 276px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); box-shadow: 0 3px 0 #e7e9e108; padding: 23px; z-index: 1; }
+    .ingress { left: 64px; width: 292px; }
+    .planning { left: 414px; width: 312px; }
+    .execution { left: 782px; width: 354px; }
+    .section-label { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--green); font-size: 10px; font-weight: 650; letter-spacing: 1.25px; }
+    .number { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #c5d6c7; border-radius: 50%; font: 10px var(--mono); letter-spacing: 0; }
+    .card h2 { margin: 21px 0 7px; font: 600 19px var(--mono); letter-spacing: -.75px; line-height: 1.2; }
+    .card .description { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .ingress-actions { margin-top: 22px; display: grid; gap: 13px; }
+    .action { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.3; }
+    .action-mark { display: grid; place-items: center; width: 19px; height: 19px; color: var(--green); border-radius: 4px; background: var(--wash); font: 10px var(--mono); }
+    .tag { position: absolute; left: 23px; bottom: 23px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #d1ddcf; border-radius: 4px; padding: 7px 9px; background: #eff4ec; font: 10px var(--mono); color: var(--green); }
+    .tag::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--green); }
+    .scheduler { position: absolute; top: 121px; left: 23px; right: 23px; height: 88px; padding: 15px 16px; background: var(--wash); border: 1px solid #d4dfd0; border-radius: 7px; }
+    .scheduler h3 { margin: 0 0 10px; color: var(--green); font-size: 16px; line-height: 1; letter-spacing: -.25px; font-weight: 600; }
+    .scheduler p { margin: 4px 0 0; color: #58675c; font-size: 11px; }
+    .planning .tag { bottom: 17px; border: 0; background: none; padding-left: 0; }
+    .execution h2 { margin-top: 21px; }
+    .runner { position: absolute; left: 15px; right: 15px; top: 120px; height: 123px; background: #eff2eb; border: 1px solid #dbe2d5; border-radius: 7px; padding: 12px 13px; }
+    .runner-label { margin: 0; font: 11px var(--mono); color: #58675c; }
+    .execution-ops { margin-top: 12px; display: grid; grid-template-columns: 1fr 29px 1fr; align-items: stretch; }
+    .op { padding: 12px 10px 10px; min-height: 64px; background: var(--card); border: 1px solid #d3ddcc; border-radius: 5px; }
+    .op h3 { margin: 0 0 7px; font-size: 13px; font-weight: 600; letter-spacing: -.2px; }
+    .op p { margin: 0; font-size: 10px; line-height: 1.4; color: var(--muted); }
+    .op:last-child { border-color: #bbd0bc; }
+    .op:last-child h3 { color: var(--green); }
+    .op-arrow { align-self: center; width: 29px; height: 16px; color: var(--green); }
+    .source { position: absolute; top: 502px; margin: 0; color: #869087; font: 9px var(--mono); letter-spacing: -.1px; }
+    .source-ingress { left: 88px; }
+    .source-planning { left: 438px; }
+    .source-execution { left: 806px; }
+    .loop-label { position: absolute; left: 352px; top: 519px; z-index: 2; width: 74px; padding: 3px 0; background: var(--paper); text-align: center; color: var(--green); font: 10px var(--mono); }
+    .results-label { position: absolute; left: 1066px; top: 512px; color: var(--green); font: 9px var(--mono); }
+    .bottom-card { position: absolute; top: 548px; height: 94px; border: 1px solid var(--border); border-radius: 9px; background: var(--card); padding: 16px 23px; z-index: 1; }
+    .completed { left: 64px; width: 292px; }
+    .state { left: 414px; width: 722px; border-color: #bdcebc; background: #edf2e9; }
+    .bottom-eyebrow { margin: 0 0 8px; color: var(--green); font-size: 9px; font-weight: 650; letter-spacing: .9px; }
+    .bottom-card h2 { margin: 0 0 6px; font-size: 17px; line-height: 1; font-weight: 600; letter-spacing: -.4px; }
+    .bottom-card p:last-child { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .state h2 { font-size: 18px; }
+    .state p:last-child { font-size: 12px; }
+    .footnotes { position: absolute; left: 64px; right: 64px; top: 673px; padding-top: 13px; border-top: 1px solid var(--border); }
+    .footnotes p { margin: 0 0 6px; color: #798278; font-size: 11px; line-height: 1.4; letter-spacing: .05px; }
+    .footnotes strong { color: #4d6154; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <main class="diagram" aria-labelledby="diagram-title" aria-describedby="diagram-caption">
+    <p class="eyebrow">DEEPINFER / REQUEST TO EXECUTION</p>
+    <span class="guide">SOURCE GUIDE / s05–s12</span>
+    <h1 id="diagram-title">Inside a production inference round</h1>
+    <p class="subtitle">Requests enter once. Their state advances across scheduled rounds.</p>
+
+    <svg class="wires" width="1200" height="760" viewBox="0 0 1200 760" fill="none" aria-hidden="true">
+      <defs>
+        <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M1 1.3 6.8 4 1 6.7" fill="none" stroke="#19654e" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+        </marker>
+      </defs>
+      <!-- New work enters planning; a plan launches device execution. -->
+      <path d="M356 355H414" stroke="#19654e" stroke-width="1.6" marker-end="url(#arrow)" />
+      <path d="M726 355H782" stroke="#19654e" stroke-width="1.6" marker-end="url(#arrow)" />
+      <!-- Sampling results feed postprocessing/state callbacks, possibly later. -->
+      <path d="M1053 487V548" stroke="#19654e" stroke-width="1.6" marker-end="url(#arrow)" />
+      <!-- Updated state can finish a sequence or make work ready for another round. -->
+      <path d="M414 595H356" stroke="#19654e" stroke-width="1.6" marker-end="url(#arrow)" />
+      <path d="M388 595V355H414" stroke="#19654e" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)" />
+      <circle cx="388" cy="595" r="3" fill="#19654e" />
+    </svg>
+
+    <section class="card ingress" aria-label="Request ingress">
+      <p class="section-label"><span class="number">01</span>REQUEST INGRESS</p>
+      <h2>LLM.generate()</h2>
+      <p class="description">Turn inputs into request state.</p>
+      <div class="ingress-actions">
+        <div class="action"><span class="action-mark">a</span>Tokenize inputs</div>
+        <div class="action"><span class="action-mark">b</span>Create + enqueue sequences</div>
+      </div>
+      <span class="tag">waiting requests</span>
+    </section>
+
+    <section class="card planning" aria-label="Planning">
+      <p class="section-label"><span class="number">02</span>PLANNING</p>
+      <h2>LLMEngine.step()</h2>
+      <p class="description">Coordinate the next execution round.</p>
+      <div class="scheduler">
+        <h3>C++ Scheduler</h3>
+        <p>Select sequences / token budget</p>
+        <p>Reserve and map KV blocks</p>
+      </div>
+      <span class="tag">execution plan</span>
+    </section>
+
+    <section class="card execution" aria-label="Execution">
+      <p class="section-label"><span class="number">03</span>EXECUTION</p>
+      <h2>Worker</h2>
+      <p class="description">Prepare inputs, coordinate execution.</p>
+      <div class="runner">
+        <p class="runner-label">ModelRunner</p>
+        <div class="execution-ops">
+          <div class="op"><h3>Model forward</h3><p>Attention / MoE</p></div>
+          <svg class="op-arrow" viewBox="0 0 29 16" fill="none" aria-hidden="true"><path d="M4 8h20m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <div class="op"><h3>Sample</h3><p>Token IDs + metadata</p></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="source source-ingress">deepinfer/entrypoints/llm.py</p>
+    <p class="source source-planning">llm_engine.py / scheduler.hpp</p>
+    <p class="source source-execution">worker.py / model_runner.py</p>
+    <span class="loop-label">next round</span>
+    <span class="results-label">results</span>
+
+    <section class="bottom-card completed" aria-label="Completed sequences return to the caller">
+      <p class="bottom-eyebrow">RETURN / WHEN FINISHED</p>
+      <h2>Completed outputs</h2>
+      <p>Collect and detokenize for the caller</p>
+    </section>
+    <section class="bottom-card state" aria-label="Engine callback and state update">
+      <p class="bottom-eyebrow">ENGINE CALLBACK / STATE UPDATE</p>
+      <h2>Commit outputs and advance request state</h2>
+      <p>Token IDs · stop conditions · sequence lengths · KV bookkeeping</p>
+    </section>
+
+    <footer class="footnotes" id="diagram-caption">
+      <p><strong>A step may cover multiple requests, prompt chunks, or draft verification.</strong> It does not imply one output token.</p>
+      <p>Async postprocessing may be deferred. Arrows show dependencies, not a mandatory serial timeline.</p>
+    </footer>
+  </main>
+</body>
+</html>

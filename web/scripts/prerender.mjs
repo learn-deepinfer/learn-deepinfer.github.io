@@ -21,14 +21,14 @@ if (!rootPattern.test(template)) throw new Error('Vite output is missing its emp
 
 const summaries = {
   zh: {
-    '': ['Learn DeepInfer — 从一个 token 开始', '每次只加一个机制，从真实 token 生成开始，逐步理解 DeepInfer 的 KV cache、批处理、调度与专家并行。'],
-    timeline: ['学习路径 — Learn DeepInfer', '12 节循序渐进的推理系统课程，从最小生成循环走向缓存、调度和分布式专家机制。'],
+    '': ['Learn DeepInfer — 沿着源码，看懂系统', '通过架构图、机制动画与固定版本源码导读，逐层理解 DeepInfer 的请求、状态、调度与专家协作。'],
+    timeline: ['学习路径 — Learn DeepInfer', '12 节 DeepInfer 框架课程，沿着请求生命周期理解状态管理、调度与专家协作。'],
     compare: ['章节对比 — Learn DeepInfer', '比较两个章节的核心机制与教学代码，理解每一次状态、接口和执行流程的变化。'],
     layers: ['推理引擎架构 — Learn DeepInfer', '沿着推理核心、状态与内存、批处理与调度、分布式与专家四个层次，建立 DeepInfer 源码地图。'],
   },
   en: {
-    '': ['Learn DeepInfer — One token at a time', 'Build an understanding of DeepInfer one mechanism at a time, from real token generation to KV caching, batching, scheduling, and expert parallelism.'],
-    timeline: ['Learning path — Learn DeepInfer', 'Explore 12 progressive inference lessons, from a minimal generation loop to memory, scheduling, and distributed experts.'],
+    '': ['Learn DeepInfer — Read the code. See the system.', 'Understand the DeepInfer framework through architecture diagrams, animated mechanisms, and guided source reading.'],
+    timeline: ['Learning path — Learn DeepInfer', 'Explore 12 DeepInfer framework lessons, from request lifecycle to state management, scheduling, and expert coordination.'],
     compare: ['Compare lessons — Learn DeepInfer', 'Compare the ideas and teaching code behind two lessons to understand how state, interfaces, and execution evolve.'],
     layers: ['Inference architecture — Learn DeepInfer', 'Map DeepInfer source across four cooperating layers: inference core, state and memory, scheduling, and distributed experts.'],
   },
@@ -57,7 +57,7 @@ function metadata({ locale, page, title, description, canonical, noindex = false
     `<meta property="og:image" content="${escape(image)}" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
-    `<meta property="og:image:alt" content="Learn DeepInfer — understand inference, one token at a time" />`,
+    `<meta property="og:image:alt" content="Learn DeepInfer — Read the code. See the system." />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${escape(title)}" />`,
     `<meta name="twitter:description" content="${escape(description)}" />`,

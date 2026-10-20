@@ -1,160 +1,154 @@
 <div align="center">
 
-<a href="https://learn-deepinfer.github.io/en/">
-  <img src="web/public/brand/logo-192.png" alt="Learn DeepInfer logo" width="80" height="80" />
-</a>
+[English](README.md) · [简体中文](README.zh-CN.md)
+
+<a href="https://learn-deepinfer.github.io/en/"><img src="docs/assets/diagrams/readme-cover.png" alt="Learn DeepInfer — Understand DeepInfer through architecture, animated mechanisms, and guided source reading." width="100%" /></a>
 
 # Learn DeepInfer
 
-**Understand inference. One token at a time.**
+**Understand DeepInfer through architecture, animated mechanisms, and guided source reading.**
 
-12 lessons to explore inference engines, with a CPU implementation you can run.
+[![Website](https://img.shields.io/badge/Website-Start_learning-19654e?style=flat-square)](https://learn-deepinfer.github.io/en/) [![12 lessons](https://img.shields.io/badge/Lessons-12-52765d?style=flat-square)](https://learn-deepinfer.github.io/en/timeline/) [![Bilingual](https://img.shields.io/badge/Language-中文_%2F_English-6d8066?style=flat-square)](https://learn-deepinfer.github.io/en/) [![License](https://img.shields.io/badge/License-Apache_2.0-849078?style=flat-square)](LICENSE)
 
-[English](README.md) · [简体中文](README.zh-CN.md)
-
-[![Website deployment](https://github.com/learn-deepinfer/learn-deepinfer.github.io/actions/workflows/pages.yml/badge.svg)](https://github.com/learn-deepinfer/learn-deepinfer.github.io/actions/workflows/pages.yml) [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-19654e?style=flat)](LICENSE) [![Lessons: 12](https://img.shields.io/badge/Lessons-12-19654e?style=flat)](https://learn-deepinfer.github.io/en/timeline/)
-
-**[Start learning →](https://learn-deepinfer.github.io/en/)** · **[中文教程 →](https://learn-deepinfer.github.io/zh/)** · [Run Chapter 1](#run-chapter-1-on-your-cpu)
+**[Start learning ↗](https://learn-deepinfer.github.io/en/)**　·　**[Architecture map ↗](https://learn-deepinfer.github.io/en/layers/)**　·　**[Source map](docs/source-map.md)**
 
 </div>
 
 ---
 
-Start with a loop that generates real text. Then follow the ideas behind KV caching, batching, scheduling, and distributed experts through small code excerpts and pinned [DeepInfer](https://github.com/deepseek-ai/DeepInfer) source links.
+How does a request enter the engine? Who chooses the next round of work? How is state reused, and how do tokens reach experts? **Learn DeepInfer** connects these questions across 12 bilingual lessons, with visual explanations and pinned source references.
 
-**No GPU is needed to read the course, explore the interactive demos, or run Chapter 1.**
+> A visual field guide to the DeepInfer framework: architecture, mechanisms, conceptual equations, and source reading. Interactive examples use preset states to explain each mechanism.
 
-<a href="https://learn-deepinfer.github.io/en/">
-  <img src="docs/assets/site-branded-desktop.png" alt="Learn DeepInfer website with lesson navigation, a minimal token loop, and a bilingual interface" width="100%" />
-</a>
+## Start with the system map
 
-## Explore the course
+Identify four responsibilities, then connect them by following a request. This is the course map; the actual request chain appears below.
 
-| Read | Trace | Try | Compare |
-| :--- | :--- | :--- | :--- |
-| Chinese and English lessons, exercises, and source links | Follow a request through four architecture layers | Step, play, reset, and scrub through mechanism demos | Compare the ideas and code behind two chapters |
+![Four responsibilities: engine orchestration, state, scheduling, and expert routing](docs/assets/diagrams/architecture.png)
 
-The website includes search, light and dark themes, mobile layouts, and reading progress saved in your browser.
+## One mechanism at a time
 
-### One mechanism per lesson
+| Responsibility | Lessons | The question to answer |
+| :--- | :--- | :--- |
+| **01 · Engine orchestration** | [s01 Request lifecycle](https://learn-deepinfer.github.io/en/s01/) · [s02 Execution boundaries](https://learn-deepinfer.github.io/en/s02/) · [s04 Sampling & state](https://learn-deepinfer.github.io/en/s04/) | Who accepts requests, runs a round, and updates state? |
+| **02 · State management** | [s03 KV cache](https://learn-deepinfer.github.io/en/s03/) · [s07 Block mapping](https://learn-deepinfer.github.io/en/s07/) · [s08 Prefix reuse](https://learn-deepinfer.github.io/en/s08/) | How does logical context map to reusable storage? |
+| **03 · Scheduling & coordination** | [s05 Batching](https://learn-deepinfer.github.io/en/s05/) · [s06 Continuous scheduling](https://learn-deepinfer.github.io/en/s06/) · [s09 DSpark](https://learn-deepinfer.github.io/en/s09/) · [s10 Execution overlap](https://learn-deepinfer.github.io/en/s10/) | What runs this round, and which stages can overlap? |
+| **04 · Experts & balance** | [s11 Expert routing](https://learn-deepinfer.github.io/en/s11/) · [s12 EPLB](https://learn-deepinfer.github.io/en/s12/) | Where do tokens go, and where do expert replicas belong? |
 
-| | Lesson | What you will explore |
-| :---: | :--- | :--- |
-| `s01` | [The Token Loop](https://learn-deepinfer.github.io/en/s01/) | Tokenization, prefill, and real CPU generation |
-| `s02` | [Inside a Forward Pass](https://learn-deepinfer.github.io/en/s02/) | Attention, normalization, and model state |
-| `s03` | [Remember with KV](https://learn-deepinfer.github.io/en/s03/) | Reuse earlier attention keys and values |
-| `s04` | [Choose the Next Token](https://learn-deepinfer.github.io/en/s04/) | From logits to token selection |
-| `s05` | [Work in Batches](https://learn-deepinfer.github.io/en/s05/) | Fixed batches and per-request stopping |
-| `s06` | [Schedule Every Step](https://learn-deepinfer.github.io/en/s06/) | Continuous batching and request admission |
-| `s07` | [Page the KV Cache](https://learn-deepinfer.github.io/en/s07/) | Logical positions and physical memory pages |
-| `s08` | [Reuse a Prefix](https://learn-deepinfer.github.io/en/s08/) | Share computation for matching prefixes |
-| `s09` | [Draft, Then Verify](https://learn-deepinfer.github.io/en/s09/) | Speculative decoding and the path to DSpark |
-| `s10` | [Hide CPU Work](https://learn-deepinfer.github.io/en/s10/) | Overlap host work with device execution |
-| `s11` | [Route to Experts](https://learn-deepinfer.github.io/en/s11/) | MoE dispatch, expert computation, and combine |
-| `s12` | [Balance the Hot Experts](https://learn-deepinfer.github.io/en/s12/) | Expert placement, replicas, and load balancing |
+## Trace a request through the source
 
-[View the learning path →](https://learn-deepinfer.github.io/en/timeline/) · [Explore the architecture →](https://learn-deepinfer.github.io/en/layers/) · [Compare chapters →](https://learn-deepinfer.github.io/en/compare/)
+`LLM.generate` creates and enqueues requests. `LLMEngine.step` coordinates rounds; the Scheduler selects work; Worker and ModelRunner organize execution; postprocessing advances request state. A step may cover multiple requests, prompt chunks, or draft verification.
 
-> **Current scope:** Chapter 1 includes a complete, runnable CPU implementation. Later chapters provide explanations, teaching excerpts, exercises, and upstream source guides. The browser demos illustrate preset state changes; they do not execute model inference.
+![DeepInfer request chain: ingress, planning, execution, state update, and next round](docs/assets/diagrams/production-pipeline.png)
 
-## Run Chapter 1 on your CPU
-
-A readable Qwen2 forward pass, an explicit greedy generation loop, and a KV cache. The runtime uses **PyTorch + safetensors + tokenizers**; Transformers is an optional correctness reference.
-
-**Requirements:** Python 3.10+. The first run downloads about 1 GB of Qwen2.5-0.5B-Instruct weights. FP32 parameters take about 2 GB of memory, plus runtime overhead.
-
-```bash
-git clone https://github.com/learn-deepinfer/learn-deepinfer.github.io.git
-cd learn-deepinfer.github.io
-
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-
-python -m build_deepinfer \
-  --prompt "Explain KV cache in a transformer in one sentence." \
-  --max-new-tokens 48
-```
-
-On Windows, activate with `.venv\Scripts\activate` in Command Prompt or `.venv\Scripts\Activate.ps1` in PowerShell.
-
-| Try this | Option |
+| Source entry | What to follow |
 | :--- | :--- |
-| Recompute the full prefix each step | `--no-cache` |
-| Use plain completion without the chat template | `--raw` |
-| Load a compatible local Qwen2 checkpoint | `--model /path/to/checkpoint --local-files-only` |
-| Save output IDs and generation timings | `--json result.json` |
+| [`entrypoints/llm.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py) | Request admission, output collection, and return |
+| [`engine/llm_engine.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py) | Round orchestration and engine state |
+| [`csrc/engine/scheduler.hpp`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp) | Request selection, budgets, and block planning |
+| [`worker/worker.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py) · [`model_runner.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py) | Execution coordination, sampling, and deferred processing |
+| [`worker/cache_engine.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py) | Cache-state organization and storage |
+| [`model_executor/eplb/policy.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py) | Expert replica allocation and placement |
 
-[Read the Chapter 1 walkthrough](docs/chapter-01.md) · [Download the standalone source ZIP](https://learn-deepinfer.github.io/chapter-01-source.zip) · [Inspect the source map](docs/source-map.md)
+Source references are pinned to [`DeepInfer@8b16149`](https://github.com/deepseek-ai/DeepInfer/tree/8b16149741a4935e1dec8cea27853f273b374c5b) · **[Open the complete source map →](docs/source-map.md)**
 
-### A real local run
+## See the state change
 
-<p align="center">
-  <a href="docs/assets/chapter-01.mp4">
-    <img src="docs/assets/chapter-01.gif" alt="Recorded CPU generation with Qwen2.5-0.5B-Instruct, showing streamed text and prefill and decode timings" width="768" />
-  </a>
-</p>
+<a href="https://learn-deepinfer.github.io/en/s06/?tab=lab"><img src="docs/assets/mechanism-demo.gif" alt="Animated preset states: continuous batch admission, completion, and slot reuse" width="100%" /></a>
 
-Recorded from the actual CLI. [Watch the video](docs/assets/chapter-01.mp4) or inspect the [recording data](docs/assets/chapter-01-recording.json). Timings describe this local run and exclude model loading and tokenization.
+| Observe | Interact | Connect |
+| :--- | :--- | :--- |
+| Batch admission, cache reuse, draft verification, expert dispatch | Step, play, or scrub; transitions connect consecutive states | Chapter comparison, bilingual explanations, pinned source entries |
+
+**[Explore continuous batching ↗](https://learn-deepinfer.github.io/en/s06/?tab=lab)**　·　**[Explore expert routing ↗](https://learn-deepinfer.github.io/en/s11/?tab=lab)**　·　**[Compare two chapters ↗](https://learn-deepinfer.github.io/en/compare/)**
+
+The website includes light and dark themes, course search, mobile layouts, and reading progress stored in your browser.
 
 <details>
-<summary><strong>Check the implementation against Transformers</strong></summary>
+<summary>Expand the website preview</summary>
 
-```bash
-python -m pip install -e '.[dev]'
-python -m pytest -q
-python scripts/validate_reference.py
-```
-
-The test suite uses small randomly initialized models and temporary checkpoints, with no model downloads. The separate reference script compares logits and greedy decisions against the real Qwen checkpoint in your local cache. Add `--allow-download` if the reference script needs to download it.
+<a href="https://learn-deepinfer.github.io/en/"><img src="docs/assets/site-overview.png" alt="Learn DeepInfer — framework guide website" width="100%" /></a>
 
 </details>
 
-## Run the website locally
+## Put the relationships into equations
 
-From the cloned repository, with Node.js 20.19+ installed (Node.js 22 recommended):
+![Concept equations for token budgets, block addressing, prefix identity, and expert combination](docs/assets/diagrams/core-equations.png)
+
+<details>
+<summary><strong>Expand equations and definitions</strong></summary>
+
+The notation describes responsibilities at a conceptual level. Read the source for concrete admission conditions, cache formats, and routing rules.
+
+**Round budget** — $\mathcal{S}_t$ is the selected request set; $q_i$ is token work assigned to request $i$, and $B_t$ is the round budget.
+
+$$
+\sum_{i\in\mathcal{S}_t}q_i\leq B_t
+$$
+
+**Block addressing** — $t$ is a zero-based position, $P$ is block size, and $\mathrm{table}[b]$ resolves the physical block.
+
+$$
+b=\left\lfloor t/P\right\rfloor,\quad o=t\bmod P,\quad p=\mathrm{table}[b]
+$$
+
+**Prefix identity** — A parent prefix, token block, and relevant context identify reusable state. $H$ denotes a conceptual identity function.
+
+$$
+K=H\!\left(K_{\mathrm{parent}},\;\mathrm{tokens},\;\mathrm{context}\right)
+$$
+
+**Expert combination** — $E_e$ is an expert function, $w_e$ its combine weight, and $\mathcal{S}(x)$ the routed expert set. Shared experts and routing-specific details are omitted.
+
+$$
+y=\sum_{e\in\mathcal{S}(x)}w_eE_e(x)
+$$
+
+</details>
+
+**[Read the illustrated architecture guide →](docs/architecture.md)** · Continue with paged state, continuous batching, and MoE routing.
+
+## Develop the website
+
+With Node.js 22, run from the repository root:
 
 ```bash
-cd web
+git clone https://github.com/learn-deepinfer/learn-deepinfer.github.io.git
+cd learn-deepinfer.github.io/web
 npm ci
 npm run dev
 ```
 
-Open **[localhost:5178](http://127.0.0.1:5178/en/)**. To preview the production build:
-
-```bash
-npm run build
-npm run preview
-```
-
-React + TypeScript + Vite. The build prerenders 32 Chinese and English route documents and assembles the Chapter 1 download. Pushes to `main` publish through GitHub Actions. [Deployment notes →](docs/deployment.md)
-
-## Find your way around
+Open [localhost:5178/en/](http://127.0.0.1:5178/en/) · `npm run build` builds 32 Chinese and English route documents.
 
 ```text
-web/                     Bilingual website and interactive mechanism demos
-build_deepinfer/
-  model.py               Qwen2 forward pass, GQA, RoPE, RMSNorm, and KV cache
-  engine.py              Greedy generation and Unicode-safe streaming
-  cli.py                 CLI, timing results, and recordings
-docs/                    Chapter walkthrough, source map, and demo media
-tests/                   Attention, cache, checkpoint, and reference checks
+web/src/data/          Bilingual lessons and DeepInfer source references
+web/src/components/    Interactive mechanisms and state transitions
+docs/                  Architecture guides, source map, deployment notes
+docs/diagrams/         Editable frontend diagram sources
+docs/assets/diagrams/  Rendered figures for the README and guides
 ```
 
-## Contribute
+[Deployment notes](docs/deployment.md) · [Render the diagrams](docs/diagrams/README.md)
 
-Found an unclear explanation or a missing step? [Open an issue](https://github.com/learn-deepinfer/learn-deepinfer.github.io/issues) or send a small PR. Corrections, translations, and focused examples for the next runnable mechanism are welcome. For CPU implementation changes, run the checks above.
+## Help make it clearer
 
-## Credits and license
+Contributions are welcome: clearer diagrams, source-map corrections, translations, and more readable state transitions. Link content changes to upstream source; run `npm run build` for website changes.
 
-- [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) inspired the progressive course structure and documentation design. Its MIT notice is preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-- Source guides refer to [deepseek-ai/DeepInfer](https://github.com/deepseek-ai/DeepInfer), pinned to [`8b16149`](https://github.com/deepseek-ai/DeepInfer/tree/8b16149741a4935e1dec8cea27853f273b374c5b). This is an independent community learning project.
-- Project code is [Apache-2.0](LICENSE). Model weights retain their own license. Chapter 1 uses a small Qwen model for teaching; it does not reproduce upstream DeepInfer's model execution or performance.
+[Open an issue](https://github.com/learn-deepinfer/learn-deepinfer.github.io/issues) · [Send a pull request](https://github.com/learn-deepinfer/learn-deepinfer.github.io/pulls)
+
+## Credits & license
+
+An independent community learning project about [deepseek-ai/DeepInfer](https://github.com/deepseek-ai/DeepInfer). The progressive course structure and documentation design draw inspiration from [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code).
+
+[Apache-2.0](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+---
 
 <div align="center">
 
-**From your first token to the system behind it.**
+**Understand each mechanism in the context of the whole system.**
 
-[Start learning](https://learn-deepinfer.github.io/en/) · [阅读中文教程](https://learn-deepinfer.github.io/zh/)
+[Start reading ↗](https://learn-deepinfer.github.io/en/)
 
 </div>

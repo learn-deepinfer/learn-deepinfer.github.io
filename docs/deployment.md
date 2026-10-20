@@ -1,13 +1,10 @@
-# Website deployment
+# Publishing the learning website
 
-The public site is https://learn-deepinfer.github.io, hosted by GitHub Pages.
+The site is [learn-deepinfer.github.io](https://learn-deepinfer.github.io), published with GitHub Pages. It presents DeepInfer source guides, architecture diagrams, and interactive mechanism explanations.
 
-The repository uses the GitHub Actions Pages workflow in `.github/workflows/pages.yml`.
-Pushes to `main` build the website with Node.js 22 and the committed npm lockfile, then upload `web/dist/` as the Pages artifact. The workflow can also be run manually from the Actions tab.
+This document describes publishing the website. The diagrams and browser interactions explain framework state and dependencies; they are not a framework execution service.
 
-In repository Settings → Pages, the build source must be **GitHub Actions**. The default github.io address needs no CNAME or DNS record.
-
-## Preview the production build
+## Build and preview
 
 ```bash
 cd web
@@ -16,10 +13,29 @@ npm run build
 npm run preview
 ```
 
-`prepare-source.mjs` assembles the standalone Chapter 1 ZIP and copies the real demo media. Vite compiles the app. `prerender.mjs` then creates 32 Chinese/English route documents, per-page metadata, `sitemap.xml`, `robots.txt`, `.nojekyll`, and a 404 fallback.
+The build prepares website resources, checks TypeScript, compiles the frontend with Vite, and prerenders the public routes. Upload the complete `web/dist/` directory, including hidden files.
 
-Each known route has its own `index.html`, so opening or refreshing `/zh/s01/` returns a real document. Unknown routes show the learning-path 404 page. Search, progress, theme, and interactive controls run in the browser.
+The prerendered output contains:
 
-To build for another domain root, set `SITE_URL=https://your-domain.example` when running `npm run build`. Update the repository Pages domain settings separately. A project subpath deployment needs additional router/base configuration.
+- 32 route documents: Chinese and English homepages, learning paths, comparisons, architecture pages, and twelve lessons per language.
+- Route-specific titles, descriptions, canonical links, and social preview metadata.
+- `sitemap.xml`, `robots.txt`, and `.nojekyll`.
+- A root redirect to `/zh/` and a `404.html` fallback that preserves the requested URL for client routing.
 
-Brand assets and their generation records are in `web/public/brand/`. Model weights, Python environments, Node dependencies, and local results are excluded from version control.
+Each known route has its own `index.html`. Opening or refreshing `/zh/s01/` therefore returns the lesson document directly. Interactive state, search, theme selection, and reading progress are handled in the browser.
+
+## GitHub Pages
+
+The workflow is [`.github/workflows/pages.yml`](../.github/workflows/pages.yml). A push to `main` builds with Node.js 22 and the committed npm lockfile, uploads `web/dist/`, and deploys the Pages artifact. The workflow can also be started manually.
+
+In repository **Settings → Pages**, select **GitHub Actions** as the build source. The default `github.io` domain requires no CNAME or additional DNS configuration.
+
+For another domain root, set `SITE_URL=https://your-domain.example` during the build and configure the Pages domain separately. A project subpath requires additional asset-base and router configuration.
+
+## Check the publication
+
+Open a homepage and a nested lesson directly, then refresh both. Confirm that the requested lesson remains selected. Check the Chinese/English links, source links, diagrams, and social preview image.
+
+Inspect a route's HTML before scripts execute: it should contain the lesson text and its own canonical URL. Check that the sitemap lists the published routes and that an unknown route reaches the site's missing-page view.
+
+The framework references are pinned to DeepInfer commit `8b16149741a4935e1dec8cea27853f273b374c5b`. Review those references whenever the upstream revision changes; publishing the frontend does not update source annotations automatically.

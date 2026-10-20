@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>Static and continuous batching — Learn DeepInfer</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { color-scheme: light; --paper: #f5f4ef; --ink: #202d29; --green: #19654e; --muted: #78817a; --line: #dce1d8; }
+    html, body { width: 1200px; height: 760px; margin: 0; overflow: hidden; }
+    body { background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    .canvas { width: 1200px; height: 760px; padding: 43px 54px 0; position: relative; }
+    .eyebrow, .mono, .footer { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .eyebrow { color: var(--green); font-size: 11px; font-weight: 600; letter-spacing: 1.85px; }
+    h1 { margin: 13px 0 10px; font-size: 43px; line-height: 1.1; font-weight: 620; letter-spacing: -1.8px; }
+    .subtitle { margin: 0; max-width: 760px; color: #69736c; font-size: 15px; line-height: 1.5; }
+    .requests { position: absolute; top: 47px; right: 54px; width: 276px; }
+    .legend-label { color: var(--muted); font-size: 9px; letter-spacing: 1.35px; margin-bottom: 15px; text-align: right; }
+    .legend { display: flex; justify-content: flex-end; gap: 14px; }
+    .request { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+    .request i { width: 22px; height: 22px; border-radius: 7px; font-style: normal; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+    .request span { color: #7a837b; font-size: 11px; }
+    .a { --cell: #e0eee5; --cell-ink: #19654e; }
+    .b { --cell: #e2eced; --cell-ink: #3f6e79; }
+    .c { --cell: #eee6dc; --cell-ink: #936a4a; }
+    .d { --cell: #ece5f0; --cell-ink: #7a5f91; }
+    .request i { background: var(--cell); color: var(--cell-ink); }
+    .explanation { margin: 25px 0 16px; display: flex; align-items: center; gap: 10px; color: #7a827b; font-size: 11px; }
+    .explanation .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .explanation strong { font-weight: 550; color: #46564c; }
+    .panel { height: 199px; border: 1px solid #dce1d8; border-radius: 18px; background: rgba(255,255,255,.57); display: grid; grid-template-columns: 213px 1fr; position: relative; overflow: hidden; }
+    .panel + .panel { margin-top: 16px; }
+    .panel.continuous { background: #fbfdf9; border-color: #bdd2c2; }
+    .panel-label { padding: 25px 22px; border-right: 1px solid #e4e8df; }
+    .panel-label .mono { display: block; font-size: 9px; letter-spacing: 1.15px; color: #829087; }
+    .panel-label h2 { font-size: 21px; font-weight: 570; letter-spacing: -.5px; margin: 12px 0 8px; line-height: 1.15; }
+    .panel-label p { margin: 0; font-size: 11px; line-height: 1.6; color: #7b837c; }
+    .continuous .panel-label .mono { color: var(--green); }
+    .chart { padding: 20px 23px 15px; position: relative; }
+    .columns, .lane { display: grid; grid-template-columns: 39px repeat(6, 1fr); gap: 9px; }
+    .columns { align-items: center; margin-bottom: 12px; }
+    .columns span { color: #8c948c; font-size: 9px; text-align: center; letter-spacing: .5px; }
+    .columns span:first-child { text-align: left; font-size: 8px; }
+    .lane { margin-top: 7px; align-items: center; }
+    .lane-label { color: #929a92; font-size: 9px; }
+    .cell { height: 30px; border-radius: 7px; background: var(--cell); color: var(--cell-ink); display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 650; position: relative; }
+    .cell small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 450; opacity: .62; }
+    .cell.last::after { content: ""; width: 4px; height: 4px; background: currentColor; border-radius: 50%; position: absolute; right: 9px; top: -2px; box-shadow: 0 0 0 2px #fafbf7; }
+    .held { height: 30px; border: 1px dashed #d7ddd3; border-radius: 7px; display: flex; align-items: center; justify-content: center; background: repeating-linear-gradient(135deg, transparent 0, transparent 5px, rgba(197,205,193,.1) 5px, rgba(197,205,193,.1) 6px); color: #a0a89e; font-size: 9px; }
+    .empty { height: 30px; position: relative; }
+    .empty::after { content: ""; width: 13px; height: 1px; background: #e1e6dc; position: absolute; left: calc(50% - 6px); top: 15px; }
+    .chart-note { position: absolute; left: 71px; bottom: 11px; color: #8a9388; font-size: 9px; display: flex; gap: 7px; align-items: center; }
+    .chart-note i { width: 11px; height: 11px; border: 1px dashed #c5cfc2; border-radius: 3px; }
+    .boundary { position: absolute; top: 47px; bottom: 40px; left: calc(66.6667% + 9.83px); border-left: 1px dashed #b8c8b9; pointer-events: none; }
+    .boundary span { position: absolute; width: 111px; left: -55px; top: 124px; text-align: center; font-size: 8px; letter-spacing: .2px; color: #7d8e7d; background: #fafbf7; padding: 3px 2px; }
+    .continuous .boundary { border-color: #8bb89b; }
+    .continuous .boundary span { color: #3a7a54; background: #fbfdf9; }
+    .bottom { display: flex; align-items: flex-start; justify-content: space-between; gap: 36px; margin-top: 22px; }
+    .key-takeaway { font-size: 14px; font-weight: 550; letter-spacing: -.15px; color: #3b5947; margin: 0; width: 400px; }
+    .scope { color: #8b938a; font-size: 10px; line-height: 1.7; margin: 0; text-align: right; }
+    .footer { position: absolute; bottom: 24px; left: 54px; right: 54px; border-top: 1px solid #dce1d8; padding-top: 16px; color: #79867a; font-size: 9px; letter-spacing: 1.6px; display: flex; justify-content: space-between; }
+    .footer span:last-child { color: #9ca49a; letter-spacing: .8px; }
+  </style>
+</head>
+<body>
+  <main class="canvas" aria-label="Illustrative comparison of static and continuous batching">
+    <header>
+      <div class="eyebrow">MECHANISM 05—06 / REQUEST SCHEDULING</div>
+      <h1>Keep the batch moving.</h1>
+      <p class="subtitle">Same requests. Different moments to admit the next one.</p>
+      <div class="requests">
+        <div class="legend-label mono">TOKENS TO GENERATE</div>
+        <div class="legend">
+          <div class="request a"><i>A</i><span>4</span></div>
+          <div class="request b"><i>B</i><span>2</span></div>
+          <div class="request c"><i>C</i><span>3</span></div>
+          <div class="request d"><i>D</i><span>2</span></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="explanation"><span class="dot"></span><strong>A, B, C start together.</strong> D is already waiting. Each active request advances one token per illustrative step.</div>
+
+    <section class="panel static" aria-label="Static batch: D starts at step 5 after A, B and C finish">
+      <div class="panel-label">
+        <span class="mono">01 / STATIC BATCH</span>
+        <h2>Wait for<br>the group.</h2>
+        <p>Finished positions stay<br>reserved until the batch ends.</p>
+      </div>
+      <div class="chart">
+        <div class="columns mono"><span>SLOT</span><span>STEP 01</span><span>STEP 02</span><span>STEP 03</span><span>STEP 04</span><span>STEP 05</span><span>STEP 06</span></div>
+        <div class="lane">
+          <span class="lane-label mono">01</span>
+          <div class="cell a">A<small>1 / 4</small></div><div class="cell a">A<small>2 / 4</small></div><div class="cell a">A<small>3 / 4</small></div><div class="cell a last">A<small>4 / 4</small></div><div class="empty"></div><div class="empty"></div>
+        </div>
+        <div class="lane">
+          <span class="lane-label mono">02</span>
+          <div class="cell b">B<small>1 / 2</small></div><div class="cell b last">B<small>2 / 2</small></div><div class="held">held</div><div class="held">held</div><div class="cell d">D<small>1 / 2</small></div><div class="cell d last">D<small>2 / 2</small></div>
+        </div>
+        <div class="lane">
+          <span class="lane-label mono">03</span>
+          <div class="cell c">C<small>1 / 3</small></div><div class="cell c">C<small>2 / 3</small></div><div class="cell c last">C<small>3 / 3</small></div><div class="held">held</div><div class="empty"></div><div class="empty"></div>
+        </div>
+        <div class="boundary"><span>BATCH BOUNDARY</span></div>
+        <div class="chart-note"><i></i> Finished request · slot not reused yet</div>
+      </div>
+    </section>
+
+    <section class="panel continuous" aria-label="Continuous batch: D takes B's position in step 3">
+      <div class="panel-label">
+        <span class="mono">02 / CONTINUOUS BATCH</span>
+        <h2>Refill the<br>next round.</h2>
+        <p>B finishes. D can join<br>while A and C keep running.</p>
+      </div>
+      <div class="chart">
+        <div class="columns mono"><span>SLOT</span><span>STEP 01</span><span>STEP 02</span><span>STEP 03</span><span>STEP 04</span><span>STEP 05</span><span>STEP 06</span></div>
+        <div class="lane">
+          <span class="lane-label mono">01</span>
+          <div class="cell a">A<small>1 / 4</small></div><div class="cell a">A<small>2 / 4</small></div><div class="cell a">A<small>3 / 4</small></div><div class="cell a last">A<small>4 / 4</small></div><div class="empty"></div><div class="empty"></div>
+        </div>
+        <div class="lane">
+          <span class="lane-label mono">02</span>
+          <div class="cell b">B<small>1 / 2</small></div><div class="cell b last">B<small>2 / 2</small></div><div class="cell d">D<small>1 / 2</small></div><div class="cell d last">D<small>2 / 2</small></div><div class="empty"></div><div class="empty"></div>
+        </div>
+        <div class="lane">
+          <span class="lane-label mono">03</span>
+          <div class="cell c">C<small>1 / 3</small></div><div class="cell c">C<small>2 / 3</small></div><div class="cell c last">C<small>3 / 3</small></div><div class="empty"></div><div class="empty"></div><div class="empty"></div>
+        </div>
+        <div class="boundary"><span>ALL REQUESTS DONE</span></div>
+        <div class="chart-note"><svg width="14" height="11" viewBox="0 0 14 11" aria-hidden="true"><path d="M1 1 V6 H12 M9 3 L12 6 L9 9" fill="none" stroke="#7a5f91" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> D enters the available position in step 03</div>
+      </div>
+    </section>
+
+    <div class="bottom">
+      <p class="key-takeaway">Reuse capacity before the original group finishes.</p>
+      <p class="scope">Illustrative token steps, not measured time. Admission also depends on memory and token budgets.<br>This diagram isolates admission behavior; it is not an exact scheduler trace.</p>
+    </div>
+    <footer class="footer"><span>LEARN DEEPINFER / CONCEPT GUIDE</span><span>DECODE-ONLY EXAMPLE · NOT A BENCHMARK</span></footer>
+  </main>
+</body>
+</html>

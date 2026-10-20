@@ -1,0 +1,7 @@
+{
+  "name": "learn-deepinfer-diagram-sources",
+  "private": true,
+  "type": "module",
+  "scripts": { "render": "node render.mjs" },
+  "devDependencies": { "katex": "0.16.47", "playwright": "1.62.1" }
+}

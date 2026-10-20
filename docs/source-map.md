@@ -1,53 +1,73 @@
-# 从第一章走到 DeepInfer 源码
+# DeepInfer 固定版本源码地图
 
-这张地图把第一章的职责对应到 DeepInfer 中值得阅读的位置。上游参考固定为 [`deepseek-ai/DeepInfer@8b16149741a4935e1dec8cea27853f273b374c5b`](https://github.com/deepseek-ai/DeepInfer/tree/8b16149741a4935e1dec8cea27853f273b374c5b)，避免跟随主分支变化后，文档与源码失去对应。
+[第一章：请求生命周期](chapter-01.md) · [架构导读](architecture.zh-CN.md) · [English architecture guide](architecture.md)
 
-第一章实现的是 Qwen2.5-0.5B-Instruct 的 CPU 推理。表里的对应关系是**职责上的类比**，不表示复用了上游实现、具有相同的模型结构或兼容接口。
+这份地图按要回答的问题组织源码入口。所有上游链接固定在 [`deepseek-ai/DeepInfer@8b16149741a4935e1dec8cea27853f273b374c5b`](https://github.com/deepseek-ai/DeepInfer/tree/8b16149741a4935e1dec8cea27853f273b374c5b)，方便把文档中的状态变化与同一版本的实现逐项对照。
 
-## 先沿主链读一遍
+第一遍只沿主链阅读：`LLM.generate → LLMEngine.add_request → Scheduler → Worker.execute_model_step → 后处理 → RequestOutput`。先找清输入、持有的状态、返回值和释放时机，再追踪各个分支。
 
-```text
-本章：    CLI → Engine → Qwen2.forward → greedy token → 下一轮
+## 1. 请求如何进入，又如何返回
 
-DeepInfer：LLM.generate
-             → LLMEngine.step
-             → C++ Scheduler
-             → Worker.execute_model_step
-             → ModelRunner → DeepseekForCausalLM / sampler
-             → 更新请求状态 → 下一轮
-```
-
-上游把调度、设备执行和后处理拆开，是为了容纳多请求、跨卡协作与异步重叠。第一章保留顺序执行的一条请求，方便先检查每个 token 是怎么产生的。
-
-| 本章阅读位置 | 已经能理解的职责 | 对应的上游阅读入口 | 需要保留的差别 |
-| --- | --- | --- | --- |
-| [`cli.py`](../build_deepinfer/cli.py)、[`engine.py`](../build_deepinfer/engine.py) | 接收文字与生成参数，启动一次生成 | [`LLM.generate`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L90) | 上游支持批量输入，先将各个请求加入引擎；本章按单请求生成 |
-| [`engine.py`](../build_deepinfer/engine.py) 的编码流程 | 把格式化后的输入转换为 IDs | [`LLM._add_request`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L144) | 上游这一处调用 tokenizer 编码并入队，不应据此认为它实现了与本章相同的 Qwen 聊天模板 |
-| [`engine.py`](../build_deepinfer/engine.py) 的逐 token 循环 | 重复前向，检查结束条件，收集结果 | [`LLM._run_engine`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L168)、[`LLMEngine.step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L860) | 上游一次 step 是一次调度与执行轮次；可能有多个请求，也可能涉及多个 draft token，不能等同于“恰好生成一个 token” |
-| 第一章没有对应调度器 | 从多条请求中选择本轮工作，管理预算与等待 | [`Scheduler::_schedule`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L275)、[`_schedule_prefill`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L347) | 上游调度热路径在 C++，NORMAL 引擎还通过 DP 组投票统一 prefill/decode 步型；普通 Python for 循环没有这些能力 |
-| [`model.py`](../build_deepinfer/model.py) 的权重加载 | 根据配置建立网络，把 checkpoint 张量装入参数 | [`get_model`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/model_loader.py#L65)、[`load_hf_checkpoint`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/model_loader.py#L136) | 上游要选择模型架构、处理设备和专用运行时布局；本章只覆盖自己实现的 Qwen2 结构 |
-| [`model.py`](../build_deepinfer/model.py) 的 `Qwen2` 前向 | embedding、各层计算、归一化与词表打分 | [`DeepseekModel.forward`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/deepseek.py#L154)、[`DeepseekForCausalLM`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/deepseek.py#L251) | Qwen2 的 GQA 稠密模型不是 DeepSeek-V4.1；上游包含跨层状态、MoE 和 draft 模块等路径 |
-| [`model.py`](../build_deepinfer/model.py) 的 `Attention` | 计算 Q/K/V、位置编码、因果注意力，读写历史状态 | [`v4_modules/attn.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/attn.py#L1) | 上游是 V4 的 MLA 运行时，含压缩 KV、稀疏索引、滑动窗口和 YoCo 等路径；不能直接套用本章 GQA 张量形状 |
-| [`model.py`](../build_deepinfer/model.py) 的 `KVCache` | 保存每层已处理输入的 K/V，跨前向复用 | [`KVCache`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L206)、[`CacheEngine`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L851) | 上游按模型缓存格式和块管理设备内存；本章的单请求缓存没有分页、多请求共享和服务级缓存系统 |
-| [`engine.py`](../build_deepinfer/engine.py) 中的 `argmax` | 从最后一个位置的 logits 选择下一个 ID | [`ModelRunner.execute_sample`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py#L337)、[`DeepseekForCausalLM.sample`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/deepseek.py#L385) | 上游 sampler 有独立输入元数据，并可能使用 MTP/draft、结构化输出等；贪心是本章刻意选择的窄范围 |
-
-## 第二遍读：为什么设备执行需要单独一层
-
-先读 [`ModelRunner.execute_main_model`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py#L308)。它准备输入，选择 CUDA Graph replay 或模型前向，返回模型输出与元数据。本章可以直接调用 `model(...)`；上游必须把一次设备执行需要的输入形状、图和 cache 组织好。
-
-再读 [`Worker.execute_model_step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L89)。函数注释给出了顺序：当前步前向、上一步后处理、当前步采样，再决定当前步是否延后处理。
-
-开启 ZOS 时，decode 的后处理延迟到下一轮，在下一轮 GPU 前向已经发出后执行。CPU 调度因此可以与设备工作重叠。与之配套的 [`_correct_seqlens_qk`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L191) 处理 CPU 元数据滞后一轮的问题。这是执行依赖和状态维护上的改造；第一章的同步循环还没有实现异步调度。
-
-## 哪些内容需要换模型、换硬件以后再实现
-
-| 上游能力 | 已核实的源码入口 | 第一章的边界 |
+| 要回答的问题 | 固定源码入口 | 要追踪的状态 |
 | --- | --- | --- |
-| MoE 专家与 EP | [`v4_modules/moe.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/moe.py#L1)、[`v4_modules/mlp.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/mlp.py#L1) | Qwen2.5-0.5B 的稠密 SwiGLU 没有路由门或跨设备 dispatch/combine |
-| EPLB | [`rebalance_experts_global`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73) | 本章没有专家，所以没有副本分配与重排 |
-| CP、DP、EP 分组 | [`ParallelProcessGroup.create_process_groups`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/parallel_utils/parallel_state.py#L70) | 本章在一台机器的 CPU 上执行一条请求，没有分布式通信 |
-| CUDA Graph 与专用算子 | [`execute_main_model`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py#L308)、[上游功能清单](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L20) | PyTorch CPU 算子的正确执行不能证明这些优化已被复现 |
+| 输入如何组织成多条请求？ | [`LLM.generate`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L90) | 输入集合、默认采样参数、请求加入顺序 |
+| 请求身份在哪里建立？ | [`LLM._add_request`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L144) | request ID、复制后的参数、规范化的输入 IDs |
+| 入队前建立了哪些内部记录？ | [`LLMEngine.add_request`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L472) | 请求记录、序列初始状态、附加输入与等待条件 |
+| 请求参数有哪些语义？ | [`SamplingParams`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/sampling_params.py#L13) | 停止条件、长度限制、采样与结构化输出选项 |
+| 循环何时继续，何时收尾？ | [`LLM._run_engine`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/entrypoints/llm.py#L168)、[`has_unfinished_requests`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L665) | 未完成请求、已经就绪的输出、请求顺序与在途结果 |
 
-上游 README 明确列出该版本支持 DeepSeek-V4.1-Flash，硬件为 NVIDIA SM100 和 Huawei Ascend 950，并说明完整在线服务仍需要另外的系统组件，参见 [支持范围](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L3) 与 [硬件和服务组件](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/README.md#L33)。其中“还需要 KV cache system”不等于上游没有设备内 KV cache；上表已经链接了它的设备缓存实现。
+`_run_engine` 很适合作为阅读起点和终点：先看它期待 `step` 返回什么，再进入引擎，最后回来确认结果如何被保存和排序。没有未完成请求时，它仍会调用 `flush_inflight_reqs`，收集延迟后处理的结果。
 
-第一章的验收是：真实权重经过本仓库的 Qwen2 前向和显式生成循环，能产生文本，且缓存路径可被检查。上游性能图、模型能力、服务接口与硬件支持均不能作为本章的实测结果。
+## 2. 调度器如何维护请求状态
+
+| 要回答的问题 | 固定源码入口 | 要追踪的状态 |
+| --- | --- | --- |
+| 等待、运行和各种结束原因如何表示？ | [`SequenceStatus`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/sequence.hpp#L30) | 状态枚举、结束判断与异常分支 |
+| 一条请求跨轮保留什么？ | [`Sequence`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/sequence.hpp#L275)、[`SequenceMetadata`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/sequence.hpp#L325) | 长期序列记录与本轮执行元数据的区别 |
+| 本轮计划包含哪些内容？ | [`SchedulerOutputs`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L45) | 已调度序列、结束序列、阶段标记和缓存状态操作 |
+| 本轮选择哪类工作？ | [`Scheduler::_schedule`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L275) | 等待与运行队列、阶段选择、参与者之间的协调 |
+| 等待请求如何进入 prefill？ | [`_schedule_prefill`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L351) | 准入条件、分块边界、本轮预算、无法分配时的处理 |
+| 已运行请求如何继续 decode？ | [`_schedule_decode`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/scheduler.hpp#L559) | 可继续的序列、追加位置、资源限制与退出条件 |
+
+阅读时给两条请求各留一行账本，记录“请求状态、本轮位置数、已有块、待完成操作”。沿一个分支走完，再解释为什么某条请求进入本轮、继续等待或结束。不要把一次 `step` 等同于每条请求恰好增加一个 token。
+
+## 3. 状态如何分配、共享与回收
+
+| 要回答的问题 | 固定源码入口 | 要追踪的状态 |
+| --- | --- | --- |
+| 块记录包含什么？谁持有管理责任？ | [`Blocks`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/block_manager.hpp#L27)、[`BlockManager`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/block_manager.hpp#L119) | 块标识、空闲资源、序列与块之间的关系 |
+| 序列何时能获得所需资源？ | [`BlockManagerMutexAcquire::try_allocate_seq`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/block_manager.hpp#L217) | 分配条件、失败路径、受保护的管理操作 |
+| 缓存记录与状态块如何表示？ | [`KVCache`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L206)、[`StateBlock`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L221) | 保存的状态、块组织与跨轮存活范围 |
+| 分配记录如何落实为缓存操作？ | [`KVCacheManager`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L309)、[`CacheEngine`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/cache_engine.py#L851) | 缓存存储、状态克隆、清理以及完成后的释放 |
+
+把逻辑 token 位置、逻辑块和物理存储分别记账。前缀相同只是共享状态的条件之一；还需要兼容的计算与位置状态，以及不会破坏其他请求的后续写入。引擎内部的这些机制，也应与额外服务组件提供的缓存能力分开理解。
+
+## 4. 一轮工作如何跨模块、跨轮次推进
+
+| 要回答的问题 | 固定源码入口 | 要追踪的状态 |
+| --- | --- | --- |
+| 调度结果如何进入执行链？ | [`LLMEngine.step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L860)、[`_execute_model_async_step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L961) | 本轮元数据、状态操作、worker 调用与延迟释放记录 |
+| 当前轮与前一轮怎样衔接？ | [`Worker.execute_model_step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L89) | 当前前向、前一轮后处理、当前采样与延迟后处理 |
+| 滞后一轮的序列元数据如何修正？ | [`Worker._correct_seqlens_qk`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/worker.py#L191) | 序列长度、上一轮接受结果与当前输入之间的关系 |
+| 执行输入与采样输入怎样分工？ | [`ModelRunner.execute_main_model`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py#L308)、[`execute_sample`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/worker/model_runner.py#L337) | 各阶段需要的元数据、阶段返回值及其消费者 |
+| 后处理如何写回请求结果？ | [`SamplerOutput`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/sequence.py#L172)、[`LLMEngine._process_model_outputs`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L687) | 接受的输出位置、结束标记与待返回结果 |
+| 已返回对象能保存多久？ | [`RequestOutput` 绑定与 `clone`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/pybind_output.cpp#L16)、[`RequestOutputPool`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/csrc/engine/pybind_output.cpp#L37) | 池中对象、独立副本以及引用与所有权的区别 |
+| 最后一轮之后如何收集在途结果？ | [`LLMEngine.flush_inflight_reqs`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L977) | 延迟后处理、待返回输出与收尾释放 |
+
+`Worker.execute_model_step` 的注释给出了很好的阅读顺序。给每份元数据标上所属轮次，观察当前轮提交工作后，为什么可以处理前一轮结果。再回到 `LLMEngine.step` 的返回值说明和 `_run_engine` 的 `clone`，确认调用方如何安全保留输出。
+
+## 5. 沿附加状态扩展阅读
+
+主链清楚以后，再进入这些机制。它们都要维持请求身份、序列位置和状态所有权之间的一致关系。
+
+| 要回答的问题 | 固定源码入口 | 要追踪的状态 |
+| --- | --- | --- |
+| 结构化输出约束何时准备并进入请求？ | [`SOMatcherBuilder`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/structure_output/so_matcher_builder.py#L19)、[`LLMEngine.step`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/engine/llm_engine.py#L860) | matcher 的就绪状态、请求关联与失败处理 |
+| Draft 输入如何衔接接受位置？ | [`DFlashMetadataMixin.build_dflash_input`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/input_metadata/dflash.py#L36) | 请求起始行、已接受偏移、位置与写入槽位 |
+| 本轮输入和采样元数据怎样拆分？ | [`input_metadata.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/input_metadata/input_metadata.py)、[`sampling_inputs.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/sampling_inputs.py) | 布局、选中位置与各阶段读取的字段 |
+| 路由结果怎样对应到专家处理结果？ | [`v4_modules/moe.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/moe.py)、[`v4_modules/mlp.py`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/models/v4_modules/mlp.py) | 逻辑专家 ID、token 对应关系、dispatch 与 combine |
+| 负载均衡改变了哪一层映射？ | [`rebalance_experts_global`](https://github.com/deepseek-ai/DeepInfer/blob/8b16149741a4935e1dec8cea27853f273b374c5b/deepinfer/model_executor/eplb/policy.py#L73) | 专家放置、物理副本与逻辑专家映射 |
+
+读 DFlash 元数据时，留意浅复制后的对象仍共享未覆盖的张量，不能据此把副本中的每个字段都当成独立可写状态。读专家负载均衡时，则把物理放置调整与 token 的逻辑专家选择分开。
+
+完成一遍阅读后，试着只用五个动词复述一条请求：**入队、准入、提交、收集、释放**。每个动词都应能找到状态变化和对应源码；暂时找不到的地方，就是下一遍需要补齐的依赖。
